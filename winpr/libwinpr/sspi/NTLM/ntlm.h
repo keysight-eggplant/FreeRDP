@@ -79,6 +79,7 @@ typedef enum _NTLM_STATE NTLM_STATE;
 
 enum _NTLM_AV_ID
 {
+#ifndef MSV1_0_NTLM3_INPUT_LENGTH
 	MsvAvEOL,
 	MsvAvNbComputerName,
 	MsvAvNbDomainName,
@@ -86,7 +87,8 @@ enum _NTLM_AV_ID
 	MsvAvDnsDomainName,
 	MsvAvDnsTreeName,
 	MsvAvFlags,
-	MsvAvTimestamp,
+#endif
+	MsvAvTimestamp = 7,
 	MsvAvSingleHost,
 	MsvAvTargetName,
 	MsvChannelBindings

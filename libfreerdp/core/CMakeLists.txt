@@ -75,6 +75,7 @@ set(${MODULE_PREFIX}_SRCS
 	security.c
 	security.h
 	settings.c
+	settings.h
 	orders.c
 	orders.h
 	freerdp.c
@@ -127,6 +128,10 @@ set(${MODULE_PREFIX}_SRCS
 	window.h
 	listener.c
 	listener.h
+    smartcardlogon.c
+    smartcardlogon.h
+    tscredentials.c
+    tscredentials.h
 	peer.c
 	peer.h)
 

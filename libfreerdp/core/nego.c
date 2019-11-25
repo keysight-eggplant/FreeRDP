@@ -36,6 +36,37 @@
 
 #define TAG FREERDP_TAG("core.nego")
 
+#if 0
+struct rdp_nego
+{
+	UINT16 port;
+	UINT32 flags;
+	const char* hostname;
+	char* cookie;
+	BYTE* RoutingToken;
+	DWORD RoutingTokenLength;
+	BOOL SendPreconnectionPdu;
+	UINT32 PreconnectionId;
+	char* PreconnectionBlob;
+
+	NEGO_STATE state;
+	BOOL TcpConnected;
+	BOOL SecurityConnected;
+	UINT32 CookieMaxLength;
+
+	BOOL sendNegoData;
+	UINT32 SelectedProtocol;
+	UINT32 RequestedProtocols;
+	BOOL NegotiateSecurityLayer;
+	BOOL EnabledProtocols[16];
+	BOOL RestrictedAdminModeRequired;
+	BOOL GatewayEnabled;
+	BOOL GatewayBypassLocal;
+
+	rdpTransport* transport;
+};
+#endif
+
 static const char* const NEGO_STATE_STRINGS[] =
 {
 	"NEGO_STATE_INITIAL",
@@ -1160,10 +1191,14 @@ void nego_free(rdpNego* nego)
  * @param port
  */
 
-void nego_set_target(rdpNego* nego, char* hostname, int port)
+BOOL nego_set_target(rdpNego* nego, const char* hostname, UINT16 port)
 {
+	if (!nego || !hostname)
+		return FALSE;
+
 	nego->hostname = hostname;
 	nego->port = port;
+	return TRUE;
 }
 
 /**
@@ -1257,6 +1292,9 @@ void nego_enable_ext(rdpNego* nego, BOOL enable_ext)
 
 BOOL nego_set_routing_token(rdpNego* nego, BYTE* RoutingToken, DWORD RoutingTokenLength)
 {
+	if (RoutingTokenLength == 0)
+		return FALSE;
+
 	free(nego->RoutingToken);
 	nego->RoutingTokenLength = RoutingTokenLength;
 	nego->RoutingToken = (BYTE*) malloc(nego->RoutingTokenLength);
@@ -1335,4 +1373,73 @@ void nego_set_preconnection_id(rdpNego* nego, UINT32 PreconnectionId)
 void nego_set_preconnection_blob(rdpNego* nego, char* PreconnectionBlob)
 {
 	nego->PreconnectionBlob = PreconnectionBlob;
+}
+
+UINT32 nego_get_selected_protocol(rdpNego* nego)
+{
+	if (!nego)
+		return 0;
+
+	return nego->SelectedProtocol;
+}
+
+BOOL nego_set_selected_protocol(rdpNego* nego, UINT32 SelectedProtocol)
+{
+	if (!nego)
+		return FALSE;
+
+	nego->SelectedProtocol = SelectedProtocol;
+	return TRUE;
+}
+
+UINT32 nego_get_requested_protocols(rdpNego* nego)
+{
+	if (!nego)
+		return 0;
+
+	return nego->RequestedProtocols;
+}
+
+
+BOOL nego_set_requested_protocols(rdpNego* nego, UINT32 RequestedProtocols)
+{
+	if (!nego)
+		return FALSE;
+
+	nego->RequestedProtocols = RequestedProtocols;
+	return TRUE;
+}
+
+NEGO_STATE nego_get_state(rdpNego* nego)
+{
+	if (!nego)
+		return NEGO_STATE_FAIL;
+
+	return nego->state;
+}
+
+BOOL nego_set_state(rdpNego* nego, NEGO_STATE state)
+{
+	if (!nego)
+		return FALSE;
+
+	nego->state = state;
+	return TRUE;
+}
+
+SEC_WINNT_AUTH_IDENTITY* nego_get_identity(rdpNego* nego)
+{
+	if (!nego)
+		return NULL;
+
+	return nla_get_identity(nego->transport->nla);
+}
+
+void nego_free_nla(rdpNego* nego)
+{
+	if (!nego || !nego->transport)
+		return;
+
+	nla_free(nego->transport->nla);
+	nego->transport->nla = NULL;
 }

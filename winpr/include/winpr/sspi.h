@@ -211,6 +211,17 @@ typedef SecPkgInfoW* PSecPkgInfoW;
 #define SEC_I_SIGNATURE_NEEDED			0x0009035C
 #define SEC_I_NO_RENEGOTIATION			0x00090360
 
+#else // ndef win32
+#define SEC_E_INVALID_PARAMETER			0x8009035D
+#define SEC_E_DELEGATION_POLICY			0x8009035E
+#define SEC_E_POLICY_NLTM_ONLY			0x8009035F
+#define SEC_E_NO_CONTEXT			0x80090361
+#define SEC_E_PKU2U_CERT_FAILURE			0x80090362
+#define SEC_E_MUTUAL_AUTH_FAILED			0x80090363
+
+#define SEC_I_SIGNATURE_NEEDED			0x0009035C
+#define SEC_I_NO_RENEGOTIATION			0x00090360
+
 #endif
 
 #define SECURITY_NATIVE_DREP			0x00000010
@@ -474,6 +485,16 @@ typedef SecPkgCredentials_NamesW* PSecPkgCredentials_NamesW;
 #define PSecPkgCredentials_Names PSecPkgCredentials_NamesA
 #endif
 
+#else //ndef win32
+
+struct _SecPkgContext_Bindings
+{
+	UINT32 BindingsLength;
+	SEC_CHANNEL_BINDINGS* Bindings;
+};
+typedef struct _SecPkgContext_Bindings SecPkgContext_Bindings;
+
+
 #endif
 
 /* InitializeSecurityContext Flags */
@@ -627,6 +648,8 @@ typedef struct _SEC_WINNT_AUTH_IDENTITY SEC_WINNT_AUTH_IDENTITY;
 
 #endif /* _AUTH_IDENTITY_DEFINED */
 
+#ifndef __SECHANDLE_DEFINED__
+#define __SECHANDLE_DEFINED__
 struct _SecHandle
 {
 	ULONG_PTR dwLower;
@@ -634,6 +657,7 @@ struct _SecHandle
 };
 typedef struct _SecHandle SecHandle;
 typedef SecHandle* PSecHandle;
+#endif
 
 typedef SecHandle CredHandle;
 typedef CredHandle* PCredHandle;

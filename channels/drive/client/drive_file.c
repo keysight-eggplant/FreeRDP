@@ -846,6 +846,7 @@ BOOL drive_file_query_directory(DRIVE_FILE* file, UINT32 FsInformationClass, BYT
 			break;
 
 		default:
+			WLog_ERR(TAG, "unhandled FsInformationClass %"PRIu32, FsInformationClass);
 			/* Unhandled FsInformationClass */
 			goto out_fail;
 	}

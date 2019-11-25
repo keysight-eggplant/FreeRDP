@@ -689,13 +689,11 @@ static BOOL license_rc4_with_licenseKey(const rdpLicense* license, const BYTE *i
 	target->length = len;
 
 	if (!winpr_RC4_Update(rc4, len, input, buffer))
-		goto error_update;
+		goto error_buffer;
 
 	winpr_RC4_Free(rc4);
 	return TRUE;
 
-error_update:
-	free(buffer);
 error_buffer:
 	winpr_RC4_Free(rc4);
 	return FALSE;
@@ -1396,11 +1394,17 @@ BOOL license_answer_license_request(rdpLicense* license)
 
 		license->EncryptedHardwareId->type = BB_ENCRYPTED_DATA_BLOB;
 		if (!license_encrypt_and_MAC(license, license->HardwareId, HWID_LENGTH, license->EncryptedHardwareId, signature))
+		{
+			free(license_data);
 			return FALSE;
+		}
 
 		calBlob = license_new_binary_blob(BB_DATA_BLOB);
 		if (!calBlob)
+		{
+			free(license_data);
 			return FALSE;
+		}
 		calBlob->data = license_data;
 		calBlob->length = license_size;
 

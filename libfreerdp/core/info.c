@@ -790,8 +790,17 @@ static void rdp_write_info_packet(rdpRdp* rdp, wStream* s)
 			passwordW = (WCHAR*) settings->RedirectionPassword;
 			cbPassword = settings->RedirectionPasswordLength - 2; /* Strip double zero termination */
 		}
+		else if (settings->SmartcardLogon)
+        {
+            WLog_DBG(TAG, "using pin (hidden)");
+			cbPassword = ConvertToUnicode(CP_UTF8, 0, settings->Pin, -1, &passwordW, 0) * 2;
+            free(userNameW);
+            userNameW = NULL;
+            cbUserName = 0;
+        }
 		else
 		{
+            WLog_DBG(TAG, "using password %s", settings->Password);
 			cbPassword = ConvertToUnicode(CP_UTF8, 0, settings->Password, -1, &passwordW, 0) * 2;
 		}
 	}
@@ -832,6 +841,14 @@ static void rdp_write_info_packet(rdpRdp* rdp, wStream* s)
 		cbWorkingDir = ConvertToUnicode(CP_UTF8, 0, settings->RemoteAssistanceSessionId, -1, &workingDirW,
 		                                0) * 2;
 	}
+
+    WLog_DBG(TAG, "cbDomain: %d -> %s", cbDomain, settings->Domain);
+    WLog_DBG(TAG, "cbUserName: %d -> %s", cbUserName, settings->Username);
+    if (settings->Pin)
+        WLog_DBG(TAG, "cbPin: %d -> hidden", strlen(settings->Pin));
+    WLog_DBG(TAG, "cbPassword: %d -> %s", cbPassword, settings->Password);
+    WLog_DBG(TAG, "cbAlternateShell: %d -> %s", cbAlternateShell, settings->AlternateShell);
+    WLog_DBG(TAG, "cbWorkingDir: %d -> %s", cbWorkingDir, settings->ShellWorkingDirectory);
 
 	Stream_Write_UINT32(s, 0); /* CodePage (4 bytes) */
 	Stream_Write_UINT32(s, flags); /* flags (4 bytes) */

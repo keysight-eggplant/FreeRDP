@@ -982,6 +982,11 @@ freerdp* freerdp_new()
  */
 void freerdp_free(freerdp* instance)
 {
+	if (instance->saved_identity != NULL)
+	{
+		instance->saved_identity->free(instance->saved_identity);
+	}
+
 	free(instance);
 }
 
@@ -1040,3 +1045,14 @@ void setChannelError(rdpContext* context, UINT errorNum, char* description)
 	strncpy(context->errorDescription, description, 499);
 	SetEvent(context->channelErrorEvent);
 }
+
+freerdp_blob* freerdp_saved_identity(freerdp* instance)
+{
+	return instance->saved_identity;
+}
+
+void freerdp_save_identity(freerdp* instance, freerdp_blob* identity)
+{
+	instance->saved_identity = identity;
+}
+

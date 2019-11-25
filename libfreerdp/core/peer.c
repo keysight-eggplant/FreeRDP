@@ -31,6 +31,7 @@
 #include <freerdp/log.h>
 
 #include "rdp.h"
+#include "nla.h"
 #include "peer.h"
 
 #define TAG FREERDP_TAG("core.peer")
@@ -482,10 +483,10 @@ static int peer_recv_callback(rdpTransport* transport, wStream* s, void* extra)
 
 			if (rdp->nego->SelectedProtocol & PROTOCOL_NLA)
 			{
-				sspi_CopyAuthIdentity(&client->identity, rdp->nego->transport->nla->identity);
+				SEC_WINNT_AUTH_IDENTITY* identity = nego_get_identity(rdp->nego);
+				sspi_CopyAuthIdentity(&client->identity, identity);
 				IFCALLRET(client->Logon, client->authenticated, client, &client->identity, TRUE);
-				nla_free(rdp->nego->transport->nla);
-				rdp->nego->transport->nla = NULL;
+				nego_free_nla(rdp->nego);
 			}
 			else
 			{

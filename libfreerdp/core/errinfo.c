@@ -354,6 +354,9 @@ int connectErrorCode;
 		"The size of a received Virtual Channel PDU (section 2.2.6.1) exceeds the chunking size specified " \
 		"in the Virtual Channel Capability Set (section 2.2.7.1.10)."
 
+#define ERRINFO_BAD_FRAME_ACK_DATA_STRING \
+	"There is not enough data to read a TS_FRAME_ACKNOWLEDGE_PDU ([MS-RDPRFX] section 2.2.3.1)."
+
 #define ERRINFO_GRAPHICS_MODE_NOT_SUPPORTED_STRING \
 		"The graphics mode requested by the client is not supported by the server."
 
@@ -374,6 +377,16 @@ int connectErrorCode;
 
 #define ERRINFO_VC_DECODING_ERROR_STRING \
 		"An error occurred when processing dynamic virtual channel data ([MS-RDPEDYC] section 3.3.5)."
+
+#define ERRINFO_VIRTUALDESKTOPTOOLARGE_STRING \
+	"The width or height of the virtual desktop defined by the monitor layout in the Client Monitor Data " \
+	"(section 2.2.1.3.6) is larger than the maximum allowed value of 32,766."
+
+#define ERRINFO_MONITORGEOMETRYVALIDATIONFAILED_STRING \
+	"The monitor geometry defined by the Client Monitor Data (section 2.2.1.3.6) is invalid."
+
+#define ERRINFO_INVALIDMONITORCOUNT_STRING \
+	"The monitorCount field in the Client Monitor Data(section 2.2.1.3.6) is too large."
 
 #define ERRINFO_UPDATE_SESSION_KEY_FAILED_STRING \
 		"An attempt to update the session keys while using Standard RDP Security mechanisms (section 5.3.7) failed."
@@ -504,6 +517,7 @@ static const ERRINFO ERRINFO_CODES[] =
 		ERRINFO_DEFINE(BAD_MONITOR_DATA),
 		ERRINFO_DEFINE(VC_DECOMPRESSED_REASSEMBLE_FAILED),
 		ERRINFO_DEFINE(VC_DATA_TOO_LONG),
+	ERRINFO_DEFINE(BAD_FRAME_ACK_DATA),
 		ERRINFO_DEFINE(GRAPHICS_MODE_NOT_SUPPORTED),
 		ERRINFO_DEFINE(GRAPHICS_SUBSYSTEM_RESET_FAILED),
 		ERRINFO_DEFINE(GRAPHICS_SUBSYSTEM_FAILED),
@@ -511,6 +525,9 @@ static const ERRINFO ERRINFO_CODES[] =
 		ERRINFO_DEFINE(TIMEZONE_KEY_NAME_LENGTH_TOO_LONG),
 		ERRINFO_DEFINE(DYNAMIC_DST_DISABLED_FIELD_MISSING),
 		ERRINFO_DEFINE(VC_DECODING_ERROR),
+	ERRINFO_DEFINE(VIRTUALDESKTOPTOOLARGE),
+	ERRINFO_DEFINE(MONITORGEOMETRYVALIDATIONFAILED),
+	ERRINFO_DEFINE(INVALIDMONITORCOUNT),
 		ERRINFO_DEFINE(UPDATE_SESSION_KEY_FAILED),
 		ERRINFO_DEFINE(DECRYPT_FAILED),
 		ERRINFO_DEFINE(ENCRYPT_FAILED),

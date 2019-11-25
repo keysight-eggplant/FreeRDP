@@ -377,12 +377,16 @@
 #define STATUS_NO_IMPERSONATION_TOKEN					((NTSTATUS)0xC000005C)
 #define STATUS_CANT_DISABLE_MANDATORY					((NTSTATUS)0xC000005D)
 #define STATUS_NO_LOGON_SERVERS						((NTSTATUS)0xC000005E)
+#ifndef STATUS_NO_SUCH_LOGON_SESSION
 #define STATUS_NO_SUCH_LOGON_SESSION					((NTSTATUS)0xC000005F)
+#endif
 #define STATUS_NO_SUCH_PRIVILEGE					((NTSTATUS)0xC0000060)
 #define STATUS_PRIVILEGE_NOT_HELD					((NTSTATUS)0xC0000061)
 #define STATUS_INVALID_ACCOUNT_NAME					((NTSTATUS)0xC0000062)
 #define STATUS_USER_EXISTS						((NTSTATUS)0xC0000063)
+#ifndef STATUS_NO_SUCH_USER
 #define STATUS_NO_SUCH_USER						((NTSTATUS)0xC0000064)
+#endif
 #define STATUS_GROUP_EXISTS						((NTSTATUS)0xC0000065)
 #define STATUS_NO_SUCH_GROUP						((NTSTATUS)0xC0000066)
 #define STATUS_MEMBER_IN_GROUP						((NTSTATUS)0xC0000067)
@@ -1274,18 +1278,18 @@ static INLINE NTSTATUS NTSTATUS_FROM_WIN32(long x)
  * http://msdn.microsoft.com/en-us/library/cc231987.aspx
  */
 
-#define FILE_INFORMATION_CLASS		_WINTERNL_FILE_INFORMATION_CLASS
-#define _FILE_INFORMATION_CLASS		_WINTERNL__FILE_INFORMATION_CLASS
-#define FileDirectoryInformation	_WINTERNL_FileDirectoryInformation
+// #define FILE_INFORMATION_CLASS		_WINTERNL_FILE_INFORMATION_CLASS
+// #define _FILE_INFORMATION_CLASS		_WINTERNL__FILE_INFORMATION_CLASS
+// #define FileDirectoryInformation	_WINTERNL_FileDirectoryInformation
 
 #include <winternl.h>
 
-#undef FILE_INFORMATION_CLASS
-#undef _FILE_INFORMATION_CLASS
-#undef FileDirectoryInformation
+// #undef FILE_INFORMATION_CLASS
+// #undef _FILE_INFORMATION_CLASS
+// #undef FileDirectoryInformation
 
 #endif
-
+/*
 typedef enum _FILE_INFORMATION_CLASS
 {
 	FileDirectoryInformation = 1,
@@ -1329,7 +1333,7 @@ typedef enum _FILE_INFORMATION_CLASS
 	FileValidDataLengthInformation,
 	FileShortNameInformation
 } FILE_INFORMATION_CLASS;
-
+*/
 #if !defined(_WIN32) || defined(_UWP)
 
 #define FILE_SUPERSEDE				0x00000000
@@ -1440,6 +1444,9 @@ typedef struct _IO_STATUS_BLOCK
 } IO_STATUS_BLOCK, *PIO_STATUS_BLOCK;
 
 typedef VOID (*PIO_APC_ROUTINE)(PVOID ApcContext, PIO_STATUS_BLOCK IoStatusBlock, ULONG Reserved);
+
+#else
+#define FILE_SUPERSEDED				0x00000000
 
 #endif
 

@@ -959,6 +959,7 @@ char (*__countof_helper(_CountofType (&_Array)[_SizeOfArray]))[_SizeOfArray];
 #if defined(_WIN32) || defined(__CYGWIN__)
   #ifdef __GNUC__
     #define DECLSPEC_EXPORT __attribute__((dllexport))
+    #undef DECLSPEC_IMPORT
     #define DECLSPEC_IMPORT __attribute__((dllimport))
   #else
     #define DECLSPEC_EXPORT __declspec(dllexport)
