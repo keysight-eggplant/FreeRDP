@@ -1042,6 +1042,11 @@ freerdp* freerdp_new(void)
  */
 void freerdp_free(freerdp* instance)
 {
+	if (instance->saved_identity != NULL)
+	{
+		instance->saved_identity->free(instance->saved_identity);
+	}
+
 	free(instance);
 }
 
@@ -1153,3 +1158,14 @@ const char* freerdp_state_string(CONNECTION_STATE state)
 {
 	return rdp_state_string(state);
 }
+
+freerdp_blob* freerdp_saved_identity(freerdp* instance)
+{
+	return instance->saved_identity;
+}
+
+void freerdp_save_identity(freerdp* instance, freerdp_blob* identity)
+{
+	instance->saved_identity = identity;
+}
+

@@ -26,6 +26,8 @@
 #ifdef _WIN32
 
 #include <winerror.h>
+#define RPC_S_PROXY_ACCESS_DENIED							0x000006C1
+#define RPC_S_COOKIE_AUTH_FAILED							0x00000729
 
 #else
 

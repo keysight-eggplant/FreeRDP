@@ -777,6 +777,14 @@ static BOOL rdp_write_info_packet(rdpRdp* rdp, wStream* s)
 			passwordW = ptrconv.wp;
 			cbPassword = (UINT16)settings->RedirectionPasswordLength;
 		}
+		else if (settings->SmartcardLogon)
+        {
+            WLog_DBG(TAG, "using pin (hidden)");
+			cbPassword = ConvertToUnicode(CP_UTF8, 0, settings->Pin, -1, &passwordW, 0) * 2;
+            free(userNameW);
+            userNameW = NULL;
+            cbUserName = 0;
+        }
 		else
 		{
 			const int rc = ConvertToUnicode(CP_UTF8, 0, settings->Password, -1, &passwordW, 0);

@@ -42,10 +42,14 @@
 #include <winpr/print.h>
 #include <winpr/tchar.h>
 #include <winpr/dsparse.h>
+#include <winpr/strlst.h>
 #include <winpr/library.h>
 #include <winpr/registry.h>
 
+//#include "../mit-krb5-pkinit/kinit.h"
 #include "nla.h"
+#include "smartcardlogon.h"
+#include "tscredentials.h"
 
 #define TAG FREERDP_TAG("core.nla")
 
@@ -154,8 +158,6 @@ static SECURITY_STATUS nla_decrypt_public_key_echo(rdpNla* nla);
 static SECURITY_STATUS nla_decrypt_public_key_hash(rdpNla* nla);
 static SECURITY_STATUS nla_encrypt_ts_credentials(rdpNla* nla);
 static SECURITY_STATUS nla_decrypt_ts_credentials(rdpNla* nla);
-static BOOL nla_read_ts_password_creds(rdpNla* nla, wStream* s);
-static void nla_identity_free(SEC_WINNT_AUTH_IDENTITY* identity);
 
 #define ber_sizeof_sequence_octet_string(length) \
 	ber_sizeof_contextual_tag(ber_sizeof_octet_string(length)) + ber_sizeof_octet_string(length)
@@ -179,41 +181,50 @@ static const BYTE ServerClientHashMagic[] = { 0x43, 0x72, 0x65, 0x64, 0x53, 0x53
 
 static const UINT32 NonceLength = 32;
 
-void nla_identity_free(SEC_WINNT_AUTH_IDENTITY* identity)
+
+/* ============================================================ */
+
+#define CHECK_MEMORY(pointer, result, description, ...)                 \
+	do                                                              \
+	{                                                               \
+		if (!(pointer))						\
+		{                                                       \
+			WLog_ERR(TAG, "%s:%d: %s() "  description,	\
+			         __FILE__, __LINE__, __FUNCTION__,	\
+			         ## __VA_ARGS__);			\
+			return result;                                  \
+		}                                                       \
+	}while (0)
+
+/* ============================================================ */
+
+
+/*
+Duplicate the cstring, or convert it to WCHAR,  depending on UNICODE.
+*/
+LPTSTR stringX_from_cstring(const char* cstring)
 {
-	if (identity)
+	LPTSTR result = NULL;
+
+	if (cstring != NULL)
 	{
-		/* Password authentication */
-		if (identity->User)
-		{
-			memset(identity->User, 0, identity->UserLength * 2);
-			free(identity->User);
-		}
-
-		if (identity->Password)
-		{
-			size_t len = identity->PasswordLength;
-
-			if (len > LB_PASSWORD_MAX_LENGTH) /* [pth] Password hash */
-				len -= LB_PASSWORD_MAX_LENGTH;
-
-			memset(identity->Password, 0, len * 2);
-			free(identity->Password);
-		}
-
-		if (identity->Domain)
-		{
-			memset(identity->Domain, 0, identity->DomainLength * 2);
-			free(identity->Domain);
-		}
+#ifdef UNICODE
+		ConvertToUnicode(CP_UTF8, 0, cstring, -1, &result, 0);
+		CHECK_MEMORY(result, NULL, "Could not allocate %d bytes.", 2 * (1 + strlen(cstring)));
+#else
+		result = strdup(cstring);
+		CHECK_MEMORY(result, NULL, "Could not allocate %d bytes.", 1 + strlen(cstring));
+#endif
 	}
 
-	free(identity);
+	return result;
 }
 
+
+
 /**
- * Initialize NTLM/Kerberos SSP authentication module (client).
- * @param credssp
+* Returns whether the username is found in the SAM database.
+* @param username: C string.
  */
 
 static BOOL is_empty(const char* str)
@@ -227,15 +238,9 @@ static BOOL is_empty(const char* str)
 
 static int nla_client_init(rdpNla* nla)
 {
-	char* spn;
-	size_t length;
-	rdpTls* tls = NULL;
-	BOOL PromptPassword = FALSE;
-	freerdp* instance = nla->instance;
-	rdpSettings* settings = nla->settings;
-	WINPR_SAM* sam;
-	WINPR_SAM_ENTRY* entry;
-	nla->state = NLA_STATE_INITIAL;
+	char mutable_username[128]; /*  greater than the max of 104 on MS-Windows 2000,  and 20 on MS-Windows 2003 */
+	WINPR_SAM* sam = SamOpen(NULL, TRUE);
+	BOOL is_in = FALSE;
 
 	if (settings->RestrictedAdminModeRequired)
 		settings->DisableCredentialsDelegation = TRUE;
@@ -243,7 +248,7 @@ static int nla_client_init(rdpNla* nla)
 	if (is_empty(settings->Username) ||
 	    (is_empty(settings->Password) && is_empty((const char*)settings->RedirectionPassword)))
 	{
-		PromptPassword = TRUE;
+		return FALSE;
 	}
 
 	if (PromptPassword && !is_empty(settings->Username))
@@ -252,36 +257,318 @@ static int nla_client_init(rdpNla* nla)
 
 		if (sam)
 		{
-			entry = SamLookupUserA(sam, settings->Username, strlen(settings->Username), NULL, 0);
+		WINPR_SAM_ENTRY* entry = SamLookupUserA(sam, mutable_username, strlen(mutable_username), NULL, 0);
 
 			if (entry)
 			{
-				/**
-				 * The user could be found in SAM database.
-				 * Use entry in SAM database later instead of prompt
-				 */
-				PromptPassword = FALSE;
+			is_in = TRUE;
 				SamFreeEntry(sam, entry);
 			}
 
 			SamClose(sam);
 		}
+
+	return is_in;
+}
+
+/* ============================================================ */
+
+
+static void free_identity_blob(freerdp_blob* blob)
+{
+	if (blob != NULL)
+	{
+		auth_identity_free(blob->data);
+		free(blob);
+	}
+}
+
+static void save_identity(rdpNla* nla)
+{
+	auth_identity* saved_identity = auth_identity_deepcopy(nla->identity);
+	freerdp_blob* blob = malloc(sizeof(*blob));
+
+	if (blob != NULL)
+	{
+		blob->data = saved_identity;
+		blob->free = free_identity_blob;
+		freerdp_save_identity(nla->instance, blob);
+	}
+}
+
+/**
+* Returns whether the username is found in the SAM database.
+* @param username: C string.
+*/
+
+static int nla_client_init_smartcard_logon(rdpNla* nla)
+{
+	csp_data_detail* csp_data = NULL;
+	smartcard_creds* smartcard_creds = NULL;
+	rdpSettings* settings = nla->settings;
+	/*
+	In case of redirection we don't need to re-establish the identity
+	(notably with kerberos), we used the one we saved previously.
+	*/
+	freerdp_blob* blob = freerdp_saved_identity(nla->instance);
+	auth_identity* saved_identity = (blob == NULL) ? NULL : blob->data;
+
+	if (saved_identity != NULL)
+	{
+		if (nla->identity != NULL)
+		{
+			auth_identity_free(nla->identity);
+		}
+
+		nla->identity = auth_identity_deepcopy(saved_identity);
+		return 0;
 	}
 
+#if 1 //defined(WITH_PKCS11H) && defined(WITH_GSSAPI)
+
+	/* gets the UPN settings->UserPrincipalName */
+	if (get_info_smartcard(settings) != 0)
+	{
+		WLog_ERR(TAG, "Failed to retrieve UPN !");
+		return -1;
+	}
+
+#if defined(WITH_KERBEROS)
+	WLog_INFO(TAG, "WITH_KERBEROS");
+
+#if 0
+	if (0 == kerberos_get_tgt(settings))
+	{
+		WLog_INFO(TAG, "Got Ticket Granting Ticket for %s", settings->CanonicalizedUserHint);
+	}
+	else
+	{
+		WLog_ERR(TAG, "Failed to get Ticket Granting Ticket from KDC!");
+		return -1;
+	}
+#else
+    settings->CanonicalizedUserHint = string_concatenate(settings->UserPrincipalName, "", NULL);
+    char *ptr = strchr(settings->CanonicalizedUserHint, '@');
+    *ptr = '\0';
+    settings->Domain = string_concatenate(&ptr[1], "", NULL);
+    WLog_ERR(TAG, "Bypassed TGT retrieval: user: %s domain: %s", settings->CanonicalizedUserHint, settings->Domain);
+#endif
+
+#else
+	/* TODO: try to get the CanonicalizedUserHint from klist? */
+	WLog_INFO(TAG, "NOT WITH_KERBEROS");
+#endif
+#else
+	WLog_ERR(TAG,
+	         "Recompile with the PKCS11H and GSSAPI features enabled to authenticate via smartcard.");
+	return -1;
+#endif
+
+	if (settings->PinPadIsPresent)
+	{
+		/* The middleware talking to the card performs PIN caching and will provide
+		* to its CSP (Cryptographic Service Provider) the PIN code
+		* when asked. If PIN caching fails, or is not handled by the middleware,
+		* the PIN code will be asked one more time before opening the session.
+		* Thus, entering PIN code on pinpad does not give the PIN code explicitly to the CSP.
+		* That's why we set it here to "0000".
+		* The PIN code is not communicated to any software module, nor central processing unit.
+		* Contrary to /pin option in command line or with getpass() which are less secure,
+		* because the PIN code is communicated (at the present) in clear and transit via the code.
+		*/
+		settings->Password = string_concatenate(PREFIX_PIN_GLOBAL, "0000", NULL);
+	}
+	else if (settings->Pin)
+	{
+#if !defined(_WIN32)
+		settings->Password = string_concatenate(PREFIX_PIN_GLOBAL, settings->Pin, NULL);
+#endif
+	}
+	else
+	{
+#if !defined(_WIN32)
+		settings->Password = strdup("");
+#endif
+	}
+
+	CHECK_MEMORY(settings->Password, -1, "Could not allocate memory for password.");
+	settings->Username = NULL;
+
+	if (settings->UserPrincipalName != NULL)
+	{
+		settings->Username = strdup(settings->UserPrincipalName);
+		CHECK_MEMORY(settings->Username,
+		             -1, "Could not strdup the UserPrincipalName (length = %d)",
+		             strlen(settings->UserPrincipalName));
+	}
+
+	if (settings->Domain == NULL)
+	{
+		WLog_ERR(TAG, "Missing domain.");
+		return -1;
+	}
+
+	CHECK_MEMORY(settings->DomainHint = strdup(settings->Domain),  /* They're freed separately! */
+	             -1, "Could not strdup the Domain (length = %d)",
+	             strlen(settings->Domain));
+
+	if (settings->CanonicalizedUserHint == NULL)
+	{
+		WLog_ERR(TAG, "Missing Canonicalized User Hint (Domain Hint = %s,  UPN = %s).",
+		         settings->DomainHint, settings->UserPrincipalName);
+		return -1;
+	}
+
+	CHECK_MEMORY((settings->UserHint = strdup(settings->CanonicalizedUserHint)),
+	             -1, "Could not strdup the CanonicalizedUserHint (length = %d)",
+	             strlen(settings->CanonicalizedUserHint));
+	WLog_INFO(TAG, "Canonicalized User Hint = %s,  Domain Hint = %s,  UPN = %s IdCertificate: %s",
+	          settings->CanonicalizedUserHint, settings->DomainHint, settings->UserPrincipalName, settings->IdCertificate);
+	CHECK_MEMORY((settings->ContainerName = string_concatenate(PREFIX_CONTAINER_NAME, settings->IdCertificate, NULL)),
+                                                               -1, "Could not allocate memory for container name.");
+	CHECK_MEMORY((settings->ContainerName = string_concatenate("", settings->IdCertificate, NULL)),
+                                                               -1, "could not allocate memory for container name.");
+
+	if ((settings->CspName == NULL) || (settings->CspName != NULL && strlen(settings->CspName) == 0))
+	{
+		WLog_ERR(TAG, "/csp argument is mandatory for smartcard-logon ");
+		return -1;
+	}
+
+	if (!settings->RedirectSmartCards && !settings->DeviceRedirection)
+	{
+		WLog_ERR(TAG, "/smartcard argument is mandatory for smartcard-logon ");
+		return -1;
+	}
+
+	WLog_DBG(TAG, "smartcard CardName=%s", settings->CardName);
+	WLog_DBG(TAG, "smartcard ReaderName=%s", settings->ReaderName);
+	WLog_DBG(TAG, "smartcard ContainerName=%s", settings->ContainerName);
+	WLog_DBG(TAG, "smartcard CspName=%s", settings->CspName);
+	csp_data = csp_data_detail_new(AT_KEYEXCHANGE /*AT_AUTHENTICATE*/,
+	                               settings->CardName,
+	                               settings->ReaderName,
+	                               settings->ContainerName,
+	                               settings->CspName);
+
+	if (csp_data == NULL)
+	{
+		goto failure;
+	}
+
+	smartcard_creds = smartcard_creds_new(/* Pin: */ settings->Pin, //Password,
+	                  settings->UserHint,
+	                  settings->DomainHint,
+	                  csp_data);
+	csp_data_detail_free(csp_data);
+
+	if (smartcard_creds == NULL)
+	{
+		goto failure;
+	}
+
+	if (nla->identity != NULL)
+	{
+		auth_identity_free(nla->identity);
+	}
+
+	nla->identity = auth_identity_new_smartcard(smartcard_creds);
+
+	if (nla->identity == NULL)
+	{
+		goto failure;
+	}
+
+	save_identity(nla);
+	return 0;
+failure:
+	WLog_ERR(TAG, "%s:%d: %s() Failed to set smartcard authentication parameters !",
+	         __FILE__, __LINE__, __FUNCTION__);
+	smartcard_creds_free(smartcard_creds);
+	return -1;
+}
+
+static BOOL sspi_SecBufferFill(PSecBuffer buffer, BYTE* data, DWORD size)
+{
+	if (buffer == NULL)
+	{
+		return FALSE;
+	}
+
+	CHECK_MEMORY(sspi_SecBufferAlloc(buffer, size),
+	             FALSE, "Failed to allocate sspi SecBuffer %d bytes", size);
+	CopyMemory(buffer->pvBuffer, data, size);
+	return TRUE;
+	}
+
+#define EMPTY_SL(field)   (((field) == NULL) || ((field##Length) == 0))
+#define EMPTY_S(cstring)  (((cstring) == NULL) || (strlen(cstring) == 0))
+#define HAS_SL(field)     ((field) != NULL)
+#define HAS_S(cstring)    ((cstring) != NULL)
+
+static BOOL should_prompt_password(rdpSettings* settings)
+{
+	BOOL PromptPassword = (!settings->SmartcardLogon
+	                       && (EMPTY_S(settings->Username)
+	                           || (!HAS_S(settings->Password)
+	                               && !HAS_S(settings->RedirectionPassword))));
 #ifndef _WIN32
 
-	if (PromptPassword)
+	if (PromptPassword && settings->RestrictedAdminModeRequired && !EMPTY_S(settings->PasswordHash))
 	{
 		if (settings->RestrictedAdminModeRequired)
 		{
 			if (!is_empty(settings->PasswordHash))
 				PromptPassword = FALSE;
 		}
-	}
 
 #endif
 
-	if (PromptPassword)
+	if (PromptPassword && !EMPTY_S(settings->Username))
+	{
+		/* Use entry in SAM database later instead of prompt when user is in the SAM database */
+		PromptPassword = !user_is_in_sam_database(settings->Username);
+	}
+
+	return PromptPassword;
+}
+
+static LPTSTR service_principal_name(const char* server_hostname)
+{
+	char* spnA = string_concatenate(TERMSRV_SPN_PREFIX, server_hostname, NULL);
+	LPTSTR spnX = stringX_from_cstring(spnA);
+	free(spnA);
+	return spnX;
+}
+
+PCHAR reversePropertyValue(int cbData, void* pvData)
+{
+    UCHAR* ptr = (PUCHAR)pvData;
+    UCHAR* dest = (PUCHAR)malloc(cbData);
+    ptr += cbData - 1;
+    for (int index = 0; index < cbData; ++index)
+        dest[index] = *ptr--;
+    return (PCHAR)dest;
+}
+
+void dumpPropertyValue(int cbData, void *pvData)
+{
+#if 0
+    BYTE *ptr = (PBYTE) pvData;
+    for (int index = 0; index < cbData; ++index)
+        WLog_DBG(TAG, "%02X", ptr[index]);
+    WLog_DBG(TAG, "\n");
+#endif
+}
+
+#define NTE_NO_MORE_ITEMS                (0x8009002AL)
+
+int getCryptoCredentialForKeyName(LPWSTR keyname, LPWSTR *credential)
+{
+    NCRYPT_PROV_HANDLE phProvider;
+    DWORD              certsize = 0;
+
+	if (NULL == credential)
 	{
 		if (freerdp_shall_disconnect(instance))
 			return 0;
@@ -297,21 +584,32 @@ static int nla_client_init(rdpNla* nla)
 			BOOL proceed = instance->Authenticate(instance, &settings->Username,
 			                                      &settings->Password, &settings->Domain);
 
-			if (!proceed)
+			// Free the keyname memory first...
+			free(wkeyname);
+			
+			// Check whether we got a certificate...
+			if (0 == certsize)
 			{
 				freerdp_set_last_error_log(instance->context,
 				                           FREERDP_ERROR_CONNECT_NO_OR_MISSING_CREDENTIALS);
 				return 0;
 			}
+
+	if (settings->SmartcardLogon)
+	{
+		if (nla_client_init_smartcard_logon(nla) < 0)
+		{
+			WLog_ERR(TAG, "Could not initialize Smartcard Logon.");
+			return -1;
 		}
 	}
-
-	if (!settings->Username)
+	else if (!HAS_S(settings->Username))
 	{
-		nla_identity_free(nla->identity);
-		nla->identity = NULL;
+		SEC_WINNT_AUTH_IDENTITY_free(nla->identity->creds.password_creds);
+		nla->identity->creds.password_creds = NULL;
 	}
-	else
+#if 0
+	else if (!HAS_S(settings->Domain))
 	{
 		if (settings->RedirectionPassword && settings->RedirectionPasswordLength > 0)
 		{
@@ -340,32 +638,24 @@ static int nla_client_init(rdpNla* nla)
 						 * length exceeding the maximum (LB_PASSWORD_MAX_LENGTH) and use it this for
 						 * hash identification in WinPR.
 						 */
-						nla->identity->PasswordLength += LB_PASSWORD_MAX_LENGTH;
-						usePassword = FALSE;
-					}
-				}
-			}
-
-			if (usePassword)
+		nla->identity->creds.password_creds->PasswordLength += LB_PASSWORD_MAX_LENGTH;
+	}
+	else
 			{
-				if (sspi_SetAuthIdentity(nla->identity, settings->Username, settings->Domain,
+		/* Normal password */
+		if (sspi_SetAuthIdentity(nla->identity->creds.password_creds, settings->Username, settings->Domain,
 				                         settings->Password) < 0)
 					return -1;
 			}
-		}
-	}
 
-	tls = nla->transport->tls;
-
-	if (!tls)
+	if ((tls = nla->transport->tls) == NULL)
 	{
 		WLog_ERR(TAG, "Unknown NLA transport layer");
 		return -1;
 	}
 
-	if (!sspi_SecBufferAlloc(&nla->PublicKey, tls->PublicKeyLength))
+	if (!sspi_SecBufferFill(&nla->PublicKey, tls->PublicKey, tls->PublicKeyLength))
 	{
-		WLog_ERR(TAG, "Failed to allocate sspi secBuffer");
 		return -1;
 	}
 
@@ -375,28 +665,14 @@ static int nla_client_init(rdpNla* nla)
 
 	if (!spn)
 		return -1;
+	}
 
-	sprintf_s(spn, length + 1, "%s%s", TERMSRV_SPN_PREFIX, settings->ServerHostname);
-#ifdef UNICODE
-	nla->ServicePrincipalName = NULL;
-	ConvertToUnicode(CP_UTF8, 0, spn, -1, &nla->ServicePrincipalName, 0);
-	free(spn);
-#else
-	nla->ServicePrincipalName = spn;
-#endif
 	nla->table = InitSecurityInterfaceEx(0);
-#ifdef WITH_GSSAPI /* KERBEROS SSP */
-	nla->status = nla->table->QuerySecurityPackageInfo(KERBEROS_SSP_NAME, &nla->pPackageInfo);
-
-	if (nla->status != SEC_E_OK)
-	{
-		WLog_ERR(TAG, "QuerySecurityPackageInfo status %s [0x%08" PRIX32 "]",
-		         GetSecurityStatusString(nla->status), nla->status);
-		return -1;
-	}
-
-#else /* NTLM SSP */
+#if 0
+	nla->status = nla->table->QuerySecurityPackageInfo(PACKAGE_NAME, &nla->pPackageInfo);
+#else
 	nla->status = nla->table->QuerySecurityPackageInfo(NLA_PKG_NAME, &nla->pPackageInfo);
+#endif
 
 	if (nla->status != SEC_E_OK)
 	{
@@ -404,6 +680,22 @@ static int nla_client_init(rdpNla* nla)
 		         GetSecurityStatusString(nla->status), nla->status);
 		return -1;
 	}
+
+	nla->cbMaxToken = nla->pPackageInfo->cbMaxToken;
+	nla->packageName = nla->pPackageInfo->Name;
+	WLog_DBG(TAG, "%s:%d: %s() packageName=%ls ; cbMaxToken=%d", __FILE__, __LINE__, __FUNCTION__,
+	         nla->packageName, nla->cbMaxToken);
+
+	SEC_WINNT_AUTH_IDENTITY *pClientAuthID = nla->identity->creds.password_creds;
+#if defined(WITH_KERBEROS)
+	SEC_WINNT_AUTH_IDENTITY_EXW ClientAuthID;
+    if (nla->identity->cred_type == credential_type_smartcard)
+	{
+		WLog_ERR(TAG, "QuerySecurityPackageInfo status %s [0x%08" PRIX32 "]",
+		         GetSecurityStatusString(nla->status), nla->status);
+		return -1;
+	}
+#endif
 
 #endif
 	nla->cbMaxToken = nla->pPackageInfo->cbMaxToken;
@@ -414,6 +706,14 @@ static int nla_client_init(rdpNla* nla)
 	                                                   NULL, nla->identity, NULL, NULL,
 	                                                   &nla->credentials, &nla->expiration);
 
+#if defined(WITH_KERBEROS)
+    if (nla->identity->cred_type == credential_type_smartcard)
+	{
+		free(ClientAuthID.User);
+		free(ClientAuthID.Password);
+	}
+#endif
+	
 	if (nla->status != SEC_E_OK)
 	{
 		WLog_ERR(TAG, "AcquireCredentialsHandle status %s [0x%08" PRIX32 "]",
@@ -516,6 +816,8 @@ int nla_client_begin(rdpNla* nla)
 		{
 			SECURITY_STATUS status;
 			status = nla->table->CompleteAuthToken(&nla->context, &nla->outputBufferDesc);
+            WLog_DBG(TAG, " InitializeSecurityContext (CompleteAuthToken) %s [0x%08"PRIX32"]",
+                     GetSecurityStatusString(status), status);
 
 			if (status != SEC_E_OK)
 			{
@@ -1495,21 +1797,13 @@ fail:
 	return status;
 }
 
-static size_t nla_sizeof_ts_password_creds(rdpNla* nla)
-{
-	size_t length = 0;
 
-	if (nla->identity)
-	{
-		length += ber_sizeof_sequence_octet_string(nla->identity->DomainLength * 2);
-		length += ber_sizeof_sequence_octet_string(nla->identity->UserLength * 2);
-		length += ber_sizeof_sequence_octet_string(nla->identity->PasswordLength * 2);
-	}
+/**
+ * Encode TSCredentials structure.
+ * @param credssp
+ */
 
-	return length;
-}
-
-static size_t nla_sizeof_ts_credentials(rdpNla* nla)
+static BOOL nla_encode_ts_credentials(rdpNla* nla)
 {
 	size_t size = 0;
 	size += ber_sizeof_integer(1);
@@ -1519,14 +1813,13 @@ static size_t nla_sizeof_ts_credentials(rdpNla* nla)
 	return size;
 }
 
-BOOL nla_read_ts_password_creds(rdpNla* nla, wStream* s)
-{
-	size_t length;
-
-	if (!nla->identity)
+	if (nla->settings->DisableCredentialsDelegation && nla->identity->creds.password_creds)
 	{
-		WLog_ERR(TAG, "nla->identity is NULL!");
-		return FALSE;
+		char* user          = strdup("");
+		char* password      = strdup("");
+		char* domain        = strdup("");
+		SEC_WINNT_AUTH_IDENTITY* password_creds = SEC_WINNT_AUTH_IDENTITY_new(user, password, domain);
+		identity = auth_identity_new_password(password_creds);
 	}
 
 	/* TSPasswordCreds (SEQUENCE)
@@ -1550,12 +1843,12 @@ BOOL nla_read_ts_password_creds(rdpNla* nla, wStream* s)
 	/* [0] domainName (OCTET STRING) */
 	if (!ber_read_contextual_tag(s, 0, &length, TRUE) || !ber_read_octet_string_tag(s, &length))
 	{
-		return FALSE;
+		identity = nla->identity;
 	}
 
 	nla->identity->DomainLength = (UINT32)length;
 
-	if (nla->identity->DomainLength > 0)
+	if (!sspi_SecBufferAlloc(&nla->tsCredentials, length))
 	{
 		nla->identity->Domain = (UINT16*)malloc(length);
 
@@ -1607,17 +1900,7 @@ BOOL nla_read_ts_password_creds(rdpNla* nla, wStream* s)
 		nla->identity->PasswordLength /= 2;
 	}
 
-	return TRUE;
-}
-
-static size_t nla_write_ts_password_creds(rdpNla* nla, wStream* s)
-{
-	size_t size = 0;
-	size_t innerSize = nla_sizeof_ts_password_creds(nla);
-	/* TSPasswordCreds (SEQUENCE) */
-	size += ber_write_sequence_tag(s, innerSize);
-
-	if (nla->identity)
+	if (identity != nla->identity)
 	{
 		/* [0] domainName (OCTET STRING) */
 		size += ber_write_sequence_octet_string(s, 0, (BYTE*)nla->identity->Domain,
@@ -1630,10 +1913,10 @@ static size_t nla_write_ts_password_creds(rdpNla* nla, wStream* s)
 		                                        nla->identity->PasswordLength * 2);
 	}
 
-	return size;
+	return result;
 }
 
-static BOOL nla_read_ts_credentials(rdpNla* nla, PSecBuffer ts_credentials)
+void dump_ssp(BOOL krb, BOOL nego, BOOL ntlm)
 {
 	wStream* s;
 	size_t length;
@@ -1663,43 +1946,16 @@ static BOOL nla_read_ts_credentials(rdpNla* nla, PSecBuffer ts_credentials)
 	return ret;
 }
 
-static size_t nla_write_ts_credentials(rdpNla* nla, wStream* s)
+void dump_message(SecBufferDesc* message)
 {
-	size_t size = 0;
-	size_t passwordSize;
-	size_t innerSize = nla_sizeof_ts_credentials(nla);
-	/* TSCredentials (SEQUENCE) */
-	size += ber_write_sequence_tag(s, innerSize);
-	/* [0] credType (INTEGER) */
-	size += ber_write_contextual_tag(s, 0, ber_sizeof_integer(1), TRUE);
-	size += ber_write_integer(s, 1);
-	/* [1] credentials (OCTET STRING) */
-	passwordSize = ber_sizeof_sequence(nla_sizeof_ts_password_creds(nla));
-	size += ber_write_contextual_tag(s, 1, ber_sizeof_octet_string(passwordSize), TRUE);
-	size += ber_write_octet_string_tag(s, passwordSize);
-	size += nla_write_ts_password_creds(nla, s);
-	return size;
-}
+	WLog_DBG(TAG, "message: buffer count = %d\n", message->cBuffers);
 
-/**
- * Encode TSCredentials structure.
- * @param credssp
- */
-
-static BOOL nla_encode_ts_credentials(rdpNla* nla)
-{
-	wStream* s;
-	size_t length;
-	int DomainLength = 0;
-	int UserLength = 0;
-	int PasswordLength = 0;
-
-	if (nla->identity)
+	for (int i = 0; i < message->cBuffers; i ++)
 	{
-		/* TSPasswordCreds */
-		DomainLength = nla->identity->DomainLength;
-		UserLength = nla->identity->UserLength;
-		PasswordLength = nla->identity->PasswordLength;
+		WLog_DBG(TAG, "message->buffer[%d].BufferType = %d\n", i, message->pBuffers[i].BufferType);
+		WLog_DBG(TAG, "message->buffer[%d].cbBuffer = %d\n", i, message->pBuffers[i].cbBuffer);
+		WLog_DBG(TAG, "message->buffer[%d].pvBuffer = ", i);
+		winpr_HexDump(TAG, WLOG_DEBUG, message->pBuffers[i].pvBuffer, message->pBuffers[i].cbBuffer);
 	}
 
 	if (nla->settings->DisableCredentialsDelegation && nla->identity)
@@ -1753,6 +2009,12 @@ static SECURITY_STATUS nla_encrypt_ts_credentials(rdpNla* nla)
 
 	if (!nla_encode_ts_credentials(nla))
 		return SEC_E_INSUFFICIENT_MEMORY;
+
+#if 1 //defined (WITH_DEBUG_NLA)
+	WLog_DBG(TAG, "Encrypting TSCredentials cbSecurityTrailer: %d cbBlockSize: %d", nla->ContextSizes.cbSecurityTrailer, nla->ContextSizes.cbBlockSize);
+	WLog_DBG(TAG, "Encrypting TSCredentials: %d (krb: %d nego: %d ntlm: %d)", nla->tsCredentials.cbBuffer, krb, nego, ntlm);
+	winpr_HexDump(TAG, WLOG_DEBUG, nla->tsCredentials.pvBuffer, nla->tsCredentials.cbBuffer);
+#endif
 
 	if (!sspi_SecBufferAlloc(&nla->authInfo,
 	                         nla->tsCredentials.cbBuffer + nla->ContextSizes.cbSecurityTrailer))
@@ -1851,7 +2113,7 @@ static SECURITY_STATUS nla_decrypt_ts_credentials(rdpNla* nla)
 	Message.pBuffers = (PSecBuffer)&Buffers;
 	status = nla->table->DecryptMessage(&nla->context, &Message, nla->recvSeqNum++, &pfQOP);
 
-	if (status != SEC_E_OK)
+	if (status == SEC_E_OK)
 	{
 		WLog_ERR(TAG, "DecryptMessage failure %s [0x%08" PRIX32 "]",
 		         GetSecurityStatusString(status), status);
@@ -1859,15 +2121,22 @@ static SECURITY_STATUS nla_decrypt_ts_credentials(rdpNla* nla)
 		return status;
 	}
 
-	if (!nla_read_ts_credentials(nla, &Buffers[1]))
-	{
-		free(buffer);
-		return SEC_E_INSUFFICIENT_MEMORY;
-	}
-
-	free(buffer);
-	return SEC_E_OK;
-}
+/**
+* TSRequest ::= SEQUENCE {
+* 	version    [0] INTEGER,
+* 	negoTokens [1] NegoData OPTIONAL,
+* 	authInfo   [2] OCTET STRING OPTIONAL,
+* 	pubKeyAuth [3] OCTET STRING OPTIONAL,
+* 	errorCode  [4] INTEGER OPTIONAL
+* }
+*
+* NegoData ::= SEQUENCE OF NegoDataItem
+*
+* NegoDataItem ::= SEQUENCE {
+* 	negoToken [0] OCTET STRING
+* }
+*
+*/
 
 static size_t nla_sizeof_nego_token(size_t length)
 {
@@ -2287,16 +2556,9 @@ LPTSTR nla_make_spn(const char* ServiceClass, const char* hostname)
 {
 	DWORD status;
 	DWORD SpnLength;
-	LPTSTR hostnameX = NULL;
-	LPTSTR ServiceClassX = NULL;
+	LPTSTR hostnameX = stringX_from_cstring(hostname);
+	LPTSTR ServiceClassX = stringX_from_cstring(ServiceClass);
 	LPTSTR ServicePrincipalName = NULL;
-#ifdef UNICODE
-	ConvertToUnicode(CP_UTF8, 0, hostname, -1, &hostnameX, 0);
-	ConvertToUnicode(CP_UTF8, 0, ServiceClass, -1, &ServiceClassX, 0);
-#else
-	hostnameX = _strdup(hostname);
-	ServiceClassX = _strdup(ServiceClass);
-#endif
 
 	if (!hostnameX || !ServiceClassX)
 	{
@@ -2477,6 +2739,8 @@ void nla_free(rdpNla* nla)
 	sspi_SecBufferFree(&nla->ClientNonce);
 	sspi_SecBufferFree(&nla->PublicKey);
 	sspi_SecBufferFree(&nla->tsCredentials);
+	auth_identity_free(nla->identity);
+	free(nla->SamFile);
 	free(nla->ServicePrincipalName);
 	nla_identity_free(nla->identity);
 	nla_buffer_free(nla);

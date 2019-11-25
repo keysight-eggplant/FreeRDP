@@ -1284,12 +1284,12 @@ static INLINE NTSTATUS NTSTATUS_FROM_WIN32(long x)
 
 #include <winternl.h>
 
-#undef FILE_INFORMATION_CLASS
-#undef _FILE_INFORMATION_CLASS
-#undef FileDirectoryInformation
+// #undef FILE_INFORMATION_CLASS
+// #undef _FILE_INFORMATION_CLASS
+// #undef FileDirectoryInformation
 
 #endif
-
+/*
 typedef enum _FILE_INFORMATION_CLASS
 {
 	FileDirectoryInformation = 1,
@@ -1333,7 +1333,7 @@ typedef enum _FILE_INFORMATION_CLASS
 	FileValidDataLengthInformation,
 	FileShortNameInformation
 } FILE_INFORMATION_CLASS;
-
+*/
 #if !defined(_WIN32) || defined(_UWP)
 
 #define FILE_SUPERSEDE 0x00000000
@@ -1443,6 +1443,9 @@ typedef struct _IO_STATUS_BLOCK
 } IO_STATUS_BLOCK, *PIO_STATUS_BLOCK;
 
 typedef VOID (*PIO_APC_ROUTINE)(PVOID ApcContext, PIO_STATUS_BLOCK IoStatusBlock, ULONG Reserved);
+
+#else
+#define FILE_SUPERSEDED				0x00000000
 
 #endif
 

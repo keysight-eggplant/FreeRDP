@@ -465,6 +465,20 @@ BOOL freerdp_client_print_command_line_help_ex(int argc, char** argv,
 	printf("\n");
 	printf("Drive Redirection: /drive:home,/home/user\n");
 	printf("Smartcard Redirection: /smartcard:<device>\n");
+	printf("Smartcard logon with rdp only:                /smartcard-logon [/sec:rdp]\n");
+	printf("Smartcard logon with Kerberos authentication: /smartcard-logon /sec:nla\n");
+	printf("Those options are only accepted with /smartcard-logon:\n");
+	printf("    PIN code: /pin:<PIN code>\n");
+	printf("    PKCS11 module to load: /pkcs11-module:<module>\n");
+	printf("    PKINIT anchors: /pkinit-anchors:<pkinit_anchors>\n");
+	printf("    Kerberos Ticket start time: /start-time:<delay to issue ticket>\n");
+	printf("    Kerberos Ticket lifetime: /lifetime:<ticket lifetime>\n");
+	printf("    Kerberos Ticket renewable lifetime: /renewable-lifetime:<ticket renewable lifetime>\n");
+	/* See also http://web.mit.edu/kerberos/krb5-latest/doc/basic/date_format.html */
+	printf("    The delay and lifetime have the following syntax: <integer>[s|m|h|d] (for seconds,  minutes,  hours and days)\n");
+	printf("    Activate Kerberos PKINIT trace: /T\n");
+	printf("    CSP Name: /csp:<csp name>\n");
+	printf("    Card Name: /card:<card name>\n");
 	printf("Serial Port Redirection: /serial:<name>,<device>,[SerCx2|SerCx|Serial],[permissive]\n");
 	printf("Serial Port Redirection: /serial:COM1,/dev/ttyS0\n");
 	printf("Parallel Port Redirection: /parallel:<name>,<device>\n");
@@ -543,6 +557,7 @@ BOOL freerdp_client_add_device_channel(rdpSettings* settings, size_t count, char
 		BOOL rc;
 		if (count < 2)
 			return FALSE;
+		}
 
 		settings->DeviceRedirection = TRUE;
 		if (count < 3)
@@ -748,6 +763,7 @@ BOOL freerdp_client_add_device_channel(rdpSettings* settings, size_t count, char
 		return TRUE;
 	}
 
+	WLog_ERR(TAG, "Invalid device %s", params[0]);
 	return FALSE;
 }
 
@@ -1524,11 +1540,20 @@ static BOOL ends_with(const char* str, const char* ext)
 	return _strnicmp(&str[strLen - extLen], ext, extLen) == 0;
 }
 
-static void activate_smartcard_logon_rdp(rdpSettings* settings)
+static void activate_smartcard_logon(rdpSettings* settings)
 {
 	settings->SmartcardLogon = TRUE;
+	/* We initialize all the settings, for all the variants of smartcard logon: */
+	settings->Pin = NULL;
+	settings->PinPadIsPresent = FALSE;
+	copy_value("0s", &settings->KerberosStartTime);
+	/* Ticket lifetime value in seconds ; KDC default value : 600mn (i.e. 36000s) ; 600mn at maximum */
+	copy_value("10h", &settings->KerberosLifeTime);
+	/* Ticket renewable lifetime value in seconds ; KDC default value : 1 day (i.e. 86400s) ; 7 days at maximum */
+	copy_value("1d", &settings->KerberosRenewableLifeTime);
+	settings->Krb5Trace = FALSE;
 	/* TODO: why not? settings->UseRdpSecurityLayer = TRUE; */
-	freerdp_settings_set_bool(settings, FreeRDP_PasswordIsSmartcardPin, TRUE);
+	freerdp_set_param_bool(settings, FreeRDP_PasswordIsSmartcardPin, FALSE); //TRUE);	
 }
 
 /**
@@ -3334,7 +3359,7 @@ int freerdp_client_settings_parse_command_line_arguments(rdpSettings* settings, 
 		CommandLineSwitchCase(arg, "smartcard-logon")
 		{
 			if (!settings->SmartcardLogon)
-				activate_smartcard_logon_rdp(settings);
+				activate_smartcard_logon(settings);
 		}
 
 		CommandLineSwitchCase(arg, "tune")
@@ -3419,6 +3444,118 @@ int freerdp_client_settings_parse_command_line_arguments(rdpSettings* settings, 
 			}
 			return COMMAND_LINE_STATUS_PRINT;
 		}
+		CommandLineSwitchCase(arg, "pin")
+		{
+			if (!settings->SmartcardLogon)
+			{
+				WLog_ERR(TAG, "/pin option can only be given after /smartcard-logon");
+				return COMMAND_LINE_ERROR;
+			}
+			else if (!copy_value(arg->Value, &settings->Pin))
+			{
+				return COMMAND_LINE_ERROR_MEMORY;
+			}
+
+			/* overwrite argument so it won't appear in ps */
+			p = arg->Value;
+
+			while (*p)
+				*(p++) = 'X';
+
+			while (*arg->Value)
+				*(arg->Value++) = 'X';
+		}
+		CommandLineSwitchCase(arg, "pkcs11-module")
+		{
+			if (!settings->SmartcardLogon)
+			{
+				WLog_ERR(TAG, "/pkcs11-module option can only be given after /smartcard-logon");
+				return COMMAND_LINE_ERROR;
+			}
+			else if (!copy_value(arg->Value, &settings->Pkcs11Module))
+			{
+				return COMMAND_LINE_ERROR_MEMORY;
+			}
+		}
+		CommandLineSwitchCase(arg, "pkinit-anchors")
+		{
+			if (!settings->SmartcardLogon)
+			{
+				WLog_ERR(TAG, "/pkinit-anchors option can only be given after /smartcard-logon");
+				return COMMAND_LINE_ERROR;
+			}
+			else if (!copy_value(arg->Value, &settings->PkinitAnchors))
+			{
+				return COMMAND_LINE_ERROR_MEMORY;
+			}
+		}
+		CommandLineSwitchCase(arg, "start-time")
+		{
+			if (!settings->SmartcardLogon)
+			{
+				WLog_ERR(TAG, "/start-time option can only be given after /smartcard-logon");
+				return COMMAND_LINE_ERROR;
+			}
+
+			/* Let kinit parse time strings according to krb5_string_to_deltat syntax. */
+			CHECK_MEMORY(copy_value(arg->Value, &settings->KerberosStartTime));
+		}
+		CommandLineSwitchCase(arg, "lifetime")
+		{
+			if (!settings->SmartcardLogon)
+			{
+				WLog_ERR(TAG, "/lifetime option can only be given after /smartcard-logon");
+				return COMMAND_LINE_ERROR;
+			}
+
+			/* Let kinit parse time strings according to krb5_string_to_deltat syntax. */
+			CHECK_MEMORY(copy_value(arg->Value, &settings->KerberosLifeTime));
+		}
+		CommandLineSwitchCase(arg, "renewable-lifetime")
+		{
+			if (!settings->SmartcardLogon)
+			{
+				WLog_ERR(TAG, "/renewable-lifetime option can only be given after /smartcard-logon");
+				return COMMAND_LINE_ERROR;
+			}
+
+			/* Let kinit parse time strings according to krb5_string_to_deltat syntax. */
+			CHECK_MEMORY(copy_value(arg->Value, &settings->KerberosRenewableLifeTime));
+		}
+		CommandLineSwitchCase(arg, "T")
+		{
+			if (!settings->SmartcardLogon)
+			{
+				WLog_ERR(TAG, "/T option can only be given after /smartcard-logon");
+				return COMMAND_LINE_ERROR;
+			}
+
+			settings->Krb5Trace = TRUE;
+		}
+		CommandLineSwitchCase(arg, "csp")
+		{
+			if (!settings->SmartcardLogon)
+			{
+				WLog_ERR(TAG, "/csp option can only be given after /smartcard-logon");
+				return COMMAND_LINE_ERROR;
+			}
+			else if (!copy_value(arg->Value, &settings->CspName))
+			{
+				return COMMAND_LINE_ERROR_MEMORY;
+			}
+		}
+		CommandLineSwitchCase(arg, "card")
+		{
+			if (!settings->SmartcardLogon)
+			{
+				WLog_ERR(TAG, "/card option can only be given after /smartcard-logon");
+				return COMMAND_LINE_ERROR;
+			}
+			else if (!copy_value(arg->Value, &settings->CardName))
+			{
+				return COMMAND_LINE_ERROR_MEMORY;
+			}
+		}
 		CommandLineSwitchDefault(arg)
 		{
 		}
@@ -3440,7 +3577,16 @@ int freerdp_client_settings_parse_command_line_arguments(rdpSettings* settings, 
 				return COMMAND_LINE_ERROR;
 		}
 		else
+		{
 			settings->Username = user;
+		}
+
+		if (settings->SmartcardLogon)
+		{
+			/* We don't need the Username for smartcard logon */
+			free(settings->Username);
+			settings->Username = NULL;
+		}
 	}
 
 	if (gwUser)

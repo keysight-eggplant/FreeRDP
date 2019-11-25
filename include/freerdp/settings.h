@@ -304,6 +304,19 @@ typedef struct _TARGET_NET_ADDRESS TARGET_NET_ADDRESS;
 #define ORIENTATION_LANDSCAPE_FLIPPED 180
 #define ORIENTATION_PORTRAIT_FLIPPED 270
 
+
+/* KeySpec https://docs.microsoft.com/en-us/windows/desktop/api/wincrypt/nf-wincrypt-cryptgenkey */
+#if !defined(AT_KEYEXCHANGE)
+#define AT_KEYEXCHANGE  (1)
+#endif
+#if !defined(AT_SIGNATURE)
+#define AT_SIGNATURE    (2)
+#endif
+#if !defined(AT_AUTHENTICATE)
+#define AT_AUTHENTICATE (3)
+#endif
+
+
 /* ARC_CS_PRIVATE_PACKET */
 typedef struct
 {
@@ -1160,11 +1173,38 @@ struct rdp_settings
 	 */
 
 	/* Credentials Cache */
-	ALIGN64 BYTE* Password51;          /* 1280 */
-	ALIGN64 UINT32 Password51Length;   /* 1281 */
-	ALIGN64 BOOL SmartcardLogon;       /* 1282 */
-	ALIGN64 BOOL PromptForCredentials; /* 1283 */
-	UINT64 padding1344[1344 - 1284];   /* 1284 */
+
+	ALIGN64 BYTE*  Password51;                    /* 1280 */    /* NOT USED */
+	ALIGN64 UINT32 Password51Length;              /* 1281 */    /* NOT USED */
+	ALIGN64 BOOL   SmartcardLogon;      /* 1282 */
+	ALIGN64 char*  Pkcs11Module;                  /* 1283 */
+	ALIGN64 BOOL   PinLoginRequired;              /* 1284 */
+	ALIGN64 BOOL   PinPadIsPresent;               /* 1285 */
+	ALIGN64 char*  Pin;                           /* 1286 */
+	ALIGN64 UINT32 KeySpec;                       /* 1287 */
+	ALIGN64 char*  CardName;                      /* 1288 */
+	ALIGN64 char*  ReaderName;                    /* 1289 */
+	ALIGN64 char*  ContainerName;                 /* 1290 */
+	ALIGN64 char*  CspName;                       /* 1291 */
+	ALIGN64 char*  UserHint;                      /* 1292 */
+	ALIGN64 char*  DomainHint;                    /* 1293 */
+	ALIGN64 UINT32 CredentialsType;               /* 1294 */
+	ALIGN64 char*  UserPrincipalName;             /* 1295 */
+	ALIGN64 char*  CanonicalizedUserHint;         /* 1296 */
+	ALIGN64 char*  IdCertificate;                 /* 1297 */
+	ALIGN64 UINT64 IdCertificateLength;           /* 1298 */
+	ALIGN64 char*  PkinitIdentity;                /* 1299 */
+	ALIGN64 char*  PkinitAnchors;                 /* 1300 */
+	ALIGN64 UINT64 SlotID;                        /* 1301 */
+	ALIGN64 char*  TokenLabel;                    /* 1302 */
+	ALIGN64 INT32  TokenFlags;                    /* 1303 */
+	ALIGN64 char*  KerberosStartTime;             /* 1304 */
+	ALIGN64 char*  KerberosLifeTime;              /* 1305 */
+	ALIGN64 char*  KerberosRenewableLifeTime;     /* 1306 */
+	ALIGN64 BOOL   Pkinit;                        /* 1307 */
+	ALIGN64 char*  PkinitCertificate;             /* 1308 */
+	ALIGN64 BOOL   Krb5Trace;             	      /* 1309 */
+	UINT64  padding1344[1344 - 1310];     	      /* 1310 */
 
 	/* Kerberos Authentication */
 	ALIGN64 char* KerberosKdc;       /* 1344 */

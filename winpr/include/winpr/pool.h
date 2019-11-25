@@ -121,6 +121,7 @@ extern "C"
 
 	/* Synch */
 
+#define WINPR_THREAD_POOL	1
 #ifdef WINPR_THREAD_POOL
 
 	WINPR_API PTP_WAIT winpr_CreateThreadpoolWait(PTP_WAIT_CALLBACK pfnwa, PVOID pv,

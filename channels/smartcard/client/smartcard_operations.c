@@ -1669,7 +1669,9 @@ static LONG smartcard_StatusW_Call(SMARTCARD_DEVICE* smartcard, SMARTCARD_OPERAT
 	if (status == SCARD_S_SUCCESS)
 	{
 		if (!call->fmszReaderNamesIsNULL)
-			ret.mszReaderNames = (BYTE*)mszReaderNames;
+			ret.mszReaderNames = (BYTE*) mszReaderNames;
+ 		else
+ 			ret.mszReaderNames = 0;
 
 		ret.cbAtrLen = cbAtrLen;
 	}

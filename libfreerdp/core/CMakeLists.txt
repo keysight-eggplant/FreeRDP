@@ -130,6 +130,10 @@ set(${MODULE_PREFIX}_SRCS
 	window.h
 	listener.c
 	listener.h
+    smartcardlogon.c
+    smartcardlogon.h
+    tscredentials.c
+    tscredentials.h
 	peer.c
 	peer.h
 	display.c
