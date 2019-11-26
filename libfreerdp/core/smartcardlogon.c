@@ -115,8 +115,10 @@ void* check_memory(void* memory, size_t size)
 #define TAG CLIENT_TAG("smartcardlogon")
 #define ORNIL(x)  ((x)?(x):"(nil)")
 
+#if defined(WITH_SMARTCARD_LOGON) && defined(_WIN32)
 extern PCHAR reversePropertyValue(int cbData, void* pvData);
 extern void dumpPropertyValue(int cbData, void *pvData);
+#endif
 
 static void copy_string(char** old_string, char* new_string)
 {
@@ -128,6 +130,8 @@ static void copy_string(char** old_string, char* new_string)
 		(*old_string) = check_memory(strdup(new_string), strlen(new_string));
 	}
 }
+
+#if defined(WITH_SMARTCARD_LOGON) && defined(_WIN32)
 HRESULT __cdecl LocateReader(LPWSTR *pReaderName)
 {
     HRESULT           hr = S_OK;
@@ -508,6 +512,7 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 	
 	return identity;
 }
+#endif
 
 int get_info_smartcard(rdpSettings* settings)
 {
@@ -519,13 +524,13 @@ int get_info_smartcard(rdpSettings* settings)
 		return -1;
 	}
 
-#if 0
+#if defined(WITH_PKCS11H) && defined(WITH_GSSAPI)
 	settings->Krb5Trace = true;
 	identity = scquery_X509_user_identities(settings->Pkcs11Module,
 		settings->ReaderName,
 		settings->CardName,
 		settings->Krb5Trace);
-#else
+#elif defined(WITH_SMARTCARD_LOGON) && defined(_WIN32)
 	identity = getUserIdentityFromSmartcard(settings);
 #endif
 

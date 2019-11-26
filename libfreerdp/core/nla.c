@@ -102,6 +102,20 @@
 
 #define TERMSRV_SPN_PREFIX "TERMSRV/"
 
+#define NLA_PKG_NAME	             NEGO_SSP_NAME
+
+#ifdef WITH_GSSAPI /* KERBEROS SSP */
+#define PACKAGE_NAME KERBEROS_SSP_NAME
+#else /* NTLM SSP */
+#define PACKAGE_NAME NLA_PKG_NAME
+#endif
+
+#ifdef UNICODE
+#define INIT_SECURITY_INTERFACE_NAME "InitSecurityInterfaceW"
+#else
+#define INIT_SECURITY_INTERFACE_NAME "InitSecurityInterfaceA"
+#endif
+
 struct rdp_nla
 {
 	BOOL server;
@@ -324,7 +338,7 @@ static int nla_client_init_smartcard_logon(rdpNla* nla)
 		return 0;
 	}
 
-#if 1 //defined(WITH_PKCS11H) && defined(WITH_GSSAPI)
+#if (defined(WITH_SMARTCARD_LOGON) && defined(_WIN32)) || (defined(WITH_PKCS11H) && defined(WITH_GSSAPI))
 
 	/* gets the UPN settings->UserPrincipalName */
 	if (get_info_smartcard(settings) != 0)
@@ -336,7 +350,7 @@ static int nla_client_init_smartcard_logon(rdpNla* nla)
 #if defined(WITH_KERBEROS)
 	WLog_INFO(TAG, "WITH_KERBEROS");
 
-#if 0
+#if defined(WITH_PKCS11H) && defined(WITH_GSSAPI)
 	if (0 == kerberos_get_tgt(settings))
 	{
 		WLog_INFO(TAG, "Got Ticket Granting Ticket for %s", settings->CanonicalizedUserHint);
@@ -347,6 +361,7 @@ static int nla_client_init_smartcard_logon(rdpNla* nla)
 		return -1;
 	}
 #else
+	// Obtain canonocalized user hint hack (for now)...TGT obtained using NEGOTIATE package...
     settings->CanonicalizedUserHint = string_concatenate(settings->UserPrincipalName, "", NULL);
     char *ptr = strchr(settings->CanonicalizedUserHint, '@');
     *ptr = '\0';
@@ -360,7 +375,7 @@ static int nla_client_init_smartcard_logon(rdpNla* nla)
 #endif
 #else
 	WLog_ERR(TAG,
-	         "Recompile with the PKCS11H and GSSAPI features enabled to authenticate via smartcard.");
+	         "Recompile with the (PKCS11H AND GSSAPI) features enabled to authenticate via smartcard.");
 	return -1;
 #endif
 
@@ -380,13 +395,13 @@ static int nla_client_init_smartcard_logon(rdpNla* nla)
 	}
 	else if (settings->Pin)
 	{
-#if !defined(_WIN32)
+#if defined(WITH_SMARTCARD_LOGON) && !defined(_WIN32)
 		settings->Password = string_concatenate(PREFIX_PIN_GLOBAL, settings->Pin, NULL);
 #endif
 	}
 	else
 	{
-#if !defined(_WIN32)
+#if defined(WITH_SMARTCARD_LOGON) && !defined(_WIN32)
 		settings->Password = strdup("");
 #endif
 	}
@@ -541,6 +556,7 @@ static LPTSTR service_principal_name(const char* server_hostname)
 	return spnX;
 }
 
+#if defined(WITH_SMARTCARD_LOGON) && defined(_WIN32)
 PCHAR reversePropertyValue(int cbData, void* pvData)
 {
     UCHAR* ptr = (PUCHAR)pvData;
@@ -553,7 +569,7 @@ PCHAR reversePropertyValue(int cbData, void* pvData)
 
 void dumpPropertyValue(int cbData, void *pvData)
 {
-#if 0
+#if 0 // Enable for debugging...
     BYTE *ptr = (PBYTE) pvData;
     for (int index = 0; index < cbData; ++index)
         WLog_DBG(TAG, "%02X", ptr[index]);
@@ -608,7 +624,7 @@ int getCryptoCredentialForKeyName(LPWSTR keyname, LPWSTR *credential)
 		SEC_WINNT_AUTH_IDENTITY_free(nla->identity->creds.password_creds);
 		nla->identity->creds.password_creds = NULL;
 	}
-#if 0
+#if defined(WITH_SMARTCARD_LOGON) && !defined(_WIN32)
 	else if (!HAS_S(settings->Domain))
 	{
 		if (settings->RedirectionPassword && settings->RedirectionPasswordLength > 0)
@@ -668,7 +684,7 @@ int getCryptoCredentialForKeyName(LPWSTR keyname, LPWSTR *credential)
 	}
 
 	nla->table = InitSecurityInterfaceEx(0);
-#if 0
+#if defined(WITH_KERBEROS) && !defined(_WIN32) // WIndows we'll use the NEGOTIATE package which does KERBEROS first falling back to NTLM
 	nla->status = nla->table->QuerySecurityPackageInfo(PACKAGE_NAME, &nla->pPackageInfo);
 #else
 	nla->status = nla->table->QuerySecurityPackageInfo(NLA_PKG_NAME, &nla->pPackageInfo);
@@ -687,7 +703,8 @@ int getCryptoCredentialForKeyName(LPWSTR keyname, LPWSTR *credential)
 	         nla->packageName, nla->cbMaxToken);
 
 	SEC_WINNT_AUTH_IDENTITY *pClientAuthID = nla->identity->creds.password_creds;
-#if defined(WITH_KERBEROS)
+#if defined(WITH_SMARTCARD_LOGON) && defined(_WIN32)
+	// This section allows the user logged in to be different from certificate AND outside of domain...
 	SEC_WINNT_AUTH_IDENTITY_EXW ClientAuthID;
     if (nla->identity->cred_type == credential_type_smartcard)
 	{
@@ -706,7 +723,7 @@ int getCryptoCredentialForKeyName(LPWSTR keyname, LPWSTR *credential)
 	                                                   NULL, nla->identity, NULL, NULL,
 	                                                   &nla->credentials, &nla->expiration);
 
-#if defined(WITH_KERBEROS)
+#if defined(WITH_SMARTCARD_LOGON) && defined(_WIN32)
     if (nla->identity->cred_type == credential_type_smartcard)
 	{
 		free(ClientAuthID.User);
