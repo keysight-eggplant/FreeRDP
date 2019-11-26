@@ -217,7 +217,13 @@ endif()
 
 if(WITH_KERBEROS)
 	freerdp_definition_add(-DWITH_KERBEROS)
-	freerdp_library_add(kernel32 ncrypt credui)
+endif()
+
+if(WITH_SMARTCARD_LOGON)
+	freerdp_definition_add(-DWITH_SMARTCARD_LOGON)
+	if(WIN32)
+		freerdp_library_add(kernel32 ncrypt credui)
+	endif()
 endif()
 
 if(WIN32 AND WITH_MEDIA_FOUNDATION)
