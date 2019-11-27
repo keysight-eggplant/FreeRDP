@@ -351,6 +351,7 @@ static int nla_client_init_smartcard_logon(rdpNla* nla)
 		return -1;
 	}
 #else
+#if 0
 	// Obtain canonocalized user hint hack (for now)...TGT obtained using NEGOTIATE package...
 	if (NULL == settings->UserPrincipalName)
 	{
@@ -381,6 +382,7 @@ static int nla_client_init_smartcard_logon(rdpNla* nla)
 			}
 		}
 	}
+#endif
 #endif
 
 #else
@@ -431,16 +433,20 @@ static int nla_client_init_smartcard_logon(rdpNla* nla)
 		             strlen(settings->UserPrincipalName));
 	}
 
+#if 0
 	if (settings->Domain == NULL)
 	{
 		WLog_ERR(TAG, "Missing domain.");
 		return -1;
 	}
+#endif
 
-	CHECK_MEMORY(settings->DomainHint = strdup(settings->Domain),  /* They're freed separately! */
-	             -1, "Could not strdup the Domain (length = %d)",
-	             strlen(settings->Domain));
+	if (NULL != settings->Domain)
+		CHECK_MEMORY(settings->DomainHint = strdup(settings->Domain),  /* They're freed separately! */
+					 -1, "Could not strdup the Domain (length = %d)",
+					 strlen(settings->Domain));
 
+#if 0
 	if (settings->CanonicalizedUserHint == NULL)
 	{
 		WLog_ERR(TAG, "Missing Canonicalized User Hint (Domain Hint = %s,  UPN = %s).",
@@ -451,6 +457,8 @@ static int nla_client_init_smartcard_logon(rdpNla* nla)
 	CHECK_MEMORY((settings->UserHint = strdup(settings->CanonicalizedUserHint)),
 	             -1, "Could not strdup the CanonicalizedUserHint (length = %d)",
 	             strlen(settings->CanonicalizedUserHint));
+#endif
+
 	WLog_INFO(TAG, "Canonicalized User Hint = %s,  Domain Hint = %s,  UPN = %s IdCertificate: %s",
 	          settings->CanonicalizedUserHint, settings->DomainHint, settings->UserPrincipalName, settings->IdCertificate);
 	CHECK_MEMORY((settings->ContainerName = string_concatenate(PREFIX_CONTAINER_NAME, settings->IdCertificate, NULL)),

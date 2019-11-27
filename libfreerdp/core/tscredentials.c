@@ -279,7 +279,8 @@ smartcard_creds* smartcard_creds_new(char* pin, char* userhint, char* domainhint
 	char* DomainHint = strdup(domainhint);
 	csp_data_detail* cspData = csp_data_detail_deepcopy(cspdata);
 
-	if ((Pin == NULL) || (UserHint == NULL) || (DomainHint == NULL) || (cspData == NULL))
+	//if ((Pin == NULL) || (UserHint == NULL) || (DomainHint == NULL) || (cspData == NULL))
+	if ((Pin == NULL) || (cspData == NULL))
 	{
 		free(Pin);
 		free(UserHint);
@@ -308,8 +309,8 @@ void smartcard_creds_free(smartcard_creds* that)
 	}
 
 	string_clear_and_free(that->Pin);
-	string_clear_and_free(that->UserHint);
-	string_clear_and_free(that->DomainHint);
+	if (NULL != that->UserHint) string_clear_and_free(that->UserHint);
+	if (NULL != that->DomainHint) string_clear_and_free(that->DomainHint);
 	csp_data_detail_free(that->csp_data);
 	memory_clear_and_free(that, sizeof(*that));
 }
