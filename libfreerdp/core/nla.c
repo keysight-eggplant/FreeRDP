@@ -352,11 +352,35 @@ static int nla_client_init_smartcard_logon(rdpNla* nla)
 	}
 #else
 	// Obtain canonocalized user hint hack (for now)...TGT obtained using NEGOTIATE package...
-    settings->CanonicalizedUserHint = string_concatenate(settings->UserPrincipalName, "", NULL);
-    char *ptr = strchr(settings->CanonicalizedUserHint, '@');
-    *ptr = '\0';
-    settings->Domain = string_concatenate(&ptr[1], "", NULL);
-    WLog_ERR(TAG, "Bypassed TGT retrieval: user: %s domain: %s", settings->CanonicalizedUserHint, settings->Domain);
+	if (NULL == settings->UserPrincipalName)
+	{
+		WLog_ERR(TAG, "UserPrincipalName is NULL!");
+		return -1;
+	}
+	else
+	{
+		settings->CanonicalizedUserHint = string_concatenate(settings->UserPrincipalName, "", NULL);
+		if (NULL == settings->CanonicalizedUserHint)
+		{
+			WLog_ERR(TAG, "CanonicalizedUserHint is NULL!");
+			return -1;
+		}
+		else
+		{
+			char *ptr = strchr(settings->CanonicalizedUserHint, '@');
+			if (NULL == ptr)
+			{
+				WLog_ERR(TAG, "UserPrincipalName/CanonicalizedUserHint is not of the correct form: %s", settings->UserPrincipalName);
+				return -1;
+			}
+			else
+			{
+				*ptr = '\0';
+				settings->Domain = string_concatenate(&ptr[1], "", NULL);
+				WLog_INFO(TAG, "Bypassed TGT retrieval: user: %s domain: %s", settings->CanonicalizedUserHint, settings->Domain);
+			}
+		}
+	}
 #endif
 
 #else
