@@ -446,6 +446,13 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 										identity = NULL;
 										break;
 									}
+									else if (0 == wcslen(namestring))
+									{
+										WLog_ERR(TAG, "NCryptOpenKey upn unavailable");
+										scquery_result_free(identity);
+										identity = NULL;
+										break;
+									}
 									else
 									{
 										identity->upn = malloc(wcslen(namestring)+1);
