@@ -22,7 +22,7 @@
 #ifndef WINPR_INTRIN_H
 #define WINPR_INTRIN_H
 
-#if 1 //ndef _WIN32
+#ifndef _WIN32
 
 /**
  * __lzcnt16, __lzcnt, __lzcnt64:
