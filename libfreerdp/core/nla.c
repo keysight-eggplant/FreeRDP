@@ -409,15 +409,15 @@ static int nla_client_init_smartcard_logon(rdpNla* nla)
 		*/
 		settings->Password = string_concatenate(PREFIX_PIN_GLOBAL, "0000", NULL);
 	}
-	else if (settings->Pin)
+#if defined(WITH_SMARTCARD_LOGON) // && !defined(_WIN32)
+    else if (settings->Pin)
 	{
-#if defined(WITH_SMARTCARD_LOGON) && !defined(_WIN32)
 		settings->Password = string_concatenate(PREFIX_PIN_GLOBAL, settings->Pin, NULL);
-#endif
 	}
 	else
-	{
-#if defined(WITH_SMARTCARD_LOGON) && !defined(_WIN32)
+#endif
+    {
+#if defined(WITH_SMARTCARD_LOGON) // && !defined(_WIN32)
 		settings->Password = strdup("");
 #endif
 	}
@@ -888,7 +888,7 @@ static int nla_client_init(rdpNla* nla)
 {
 	freerdp* instance = nla->instance;
 	rdpSettings* settings = nla->settings;
-	BOOL PromptPassword = should_prompt_password(settings);
+    BOOL PromptPassword = should_prompt_password(settings);
 	rdpTls* tls = NULL;
 	nla->state = NLA_STATE_INITIAL;
 	nla->identity = auth_identity_new_password(SEC_WINNT_AUTH_IDENTITY_new(NULL, NULL, NULL));
@@ -901,8 +901,7 @@ static int nla_client_init(rdpNla* nla)
 
 	settings->DisableCredentialsDelegation |= settings->RestrictedAdminModeRequired;
 
-	if ((PromptPassword || settings->SmartcardLogon)
-	    && (instance->Authenticate != NULL)
+	if (PromptPassword && (instance->Authenticate != NULL)
 	    && (!instance->Authenticate(instance, &settings->Username, &settings->Password, &settings->Domain)))
 			{
 				freerdp_set_last_error(instance->context, FREERDP_ERROR_CONNECT_NO_OR_MISSING_CREDENTIALS);
@@ -914,7 +913,7 @@ static int nla_client_init(rdpNla* nla)
 		if (nla_client_init_smartcard_logon(nla) < 0)
 		{
 			WLog_ERR(TAG, "Could not initialize Smartcard Logon.");
-			return -1;
+            return -1;
 		}
 	}
 	else if (!HAS_S(settings->Username))

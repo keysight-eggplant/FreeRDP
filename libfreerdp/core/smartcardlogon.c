@@ -247,7 +247,17 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 				szScope[length] = '\\';
 				szScope[length + 1] = '\0';
 			}
-			WLog_DBG(TAG, "enumerating provider: %s @reader: %s\n", settings->CspName, readerName);
+
+            // DEBUG...
+            if (WLog_IsLevelActive(WLog_Get(TAG), WLOG_DEBUG))
+            {
+                int length = wcslen(szScope);
+                char *tmpReaderName = malloc(length+1);
+                wcstombs(tmpReaderName, szScope, length);
+                tmpReaderName[length] = '\0';
+                WLog_DBG(TAG, "enumerating provider: %s @reader: %d -> %s\n", settings->CspName, length, tmpReaderName);
+                free(tmpReaderName);
+            }
 
 			while (ERROR_SUCCESS == NCryptEnumKeys(phProvider, szScope, &ppKeyName, &ppEnumState, 0))
 			{
@@ -299,17 +309,17 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 						if (ERROR_SUCCESS != status)
 						{
 							WLog_ERR(TAG, "NCryptGetProperty (%S) error: %ld (0x%0X)\n", NCRYPT_CERTIFICATE_PROPERTY, status, (unsigned int)status);
-						}
+                        }
 						else
 						{
-							{
+                            {
 								// Get card name...
 								{
 									LONG         status = 0;
 									SCARDCONTEXT scContext = 0;
 
 									status = SCardEstablishContext(SCARD_SCOPE_USER, NULL, NULL, &scContext);
-									
+
 									if (0 == scContext)
 									{
 										WLog_ERR(TAG, "SCardEstablishContext error: %ld (0x%0X)\n", status, (unsigned int)status);
@@ -317,7 +327,7 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 										scquery_result_free(identity);
 										identity = NULL;
 										SCardReleaseContext(scContext);
-										break;
+                                        break;
 									}
 									else
 									{
@@ -335,7 +345,7 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 											scquery_result_free(identity);
 											identity = NULL;
 											SCardReleaseContext(scContext);
-											break;
+                                            break;
 										}
 
 										BYTE  atrstring[256] = { 0 };
@@ -356,7 +366,7 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 											SCardReleaseContext(scContext);
 											break;
 										}
-										
+
 										wchar_t atrname[256] = { 0 };
 										cbLength = 256;
 										
@@ -398,7 +408,7 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 													identity = NULL;
 													SCardDisconnect(scContext, SCARD_LEAVE_CARD);
 													SCardReleaseContext(scContext);
-													break;
+                                                    break;
 												}
 												else
 												{
@@ -436,7 +446,7 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 								}
 								else
 								{
-									// Need to first ascertain whether this certificate is allowed for authentication/smart card logon...
+                                    // Need to first ascertain whether this certificate is allowed for authentication/smart card logon...
                                     {
                                         DWORD flags = CERT_FIND_EXT_ONLY_ENHKEY_USAGE_FLAG; // CERT_FIND_EXT_ONLY_ENHKEY_USAGE_FLAG | CERT_FIND_PROP_ONLY_ENHKEY_USAGE_FLAG
                                         DWORD dusage = 0;
@@ -519,7 +529,7 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
                                         // Cleanup...
                                         free(pusage);
                                     }
-									
+
 									// Get UPN (User Principal Name)...need the certificate for this...
 									WCHAR namestring[256] = { 0 };
 
@@ -544,7 +554,7 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 										wcstombs(identity->upn, namestring, wcslen(namestring));
 										printf("UPN: %s\n", identity->upn);
 									}
-									
+
 									// X500 name string (X509 compatible???)...
 									{
                                         CERT_NAME_BLOB nameblob = { pcontext->pCertInfo->Subject.cbData, pcontext->pCertInfo->Subject.pbData };
@@ -600,7 +610,7 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 		free(readerName);
 		free(cspname);
 	}
-	
+
 	return identity;
 }
 #endif
@@ -609,20 +619,27 @@ int get_info_smartcard(rdpSettings* settings)
 {
 	scquery_result identity = NULL;
 
-	if (settings->Pkcs11Module == NULL)
-	{
-		WLog_ERR(TAG, "Missing /pkcs11module");
-		return -1;
-	}
-
 #if defined(WITH_PKCS11H) && defined(WITH_GSSAPI)
-	settings->Krb5Trace = true;
+    if (settings->Pkcs11Module == NULL)
+    {
+        WLog_ERR(TAG, "Missing /pkcs11module");
+        return -1;
+    }
+    
+    settings->Krb5Trace = true;
 	identity = scquery_X509_user_identities(settings->Pkcs11Module,
 		settings->ReaderName,
 		settings->CardName,
 		settings->Krb5Trace);
 #elif defined(WITH_SMARTCARD_LOGON) && defined(_WIN32)
-	identity = getUserIdentityFromSmartcard(settings);
+    // Default the Cryptographic Service Provider if none specified...
+    if (NULL == settings->CspName)
+    {
+        settings->CspName = strdup(MS_SCARD_PROV_A);
+    }
+
+    // Attempt to read an identity from the smart card...
+    identity = getUserIdentityFromSmartcard(settings);
 #endif
 
 	if (identity == NULL)

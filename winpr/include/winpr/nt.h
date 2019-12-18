@@ -1278,19 +1278,23 @@ static INLINE NTSTATUS NTSTATUS_FROM_WIN32(long x)
  * http://msdn.microsoft.com/en-us/library/cc231987.aspx
  */
 
-// #define FILE_INFORMATION_CLASS		_WINTERNL_FILE_INFORMATION_CLASS
-// #define _FILE_INFORMATION_CLASS		_WINTERNL__FILE_INFORMATION_CLASS
-// #define FileDirectoryInformation	_WINTERNL_FileDirectoryInformation
+#ifndef __MINGW32__
+#define FILE_INFORMATION_CLASS		_WINTERNL_FILE_INFORMATION_CLASS
+#define _FILE_INFORMATION_CLASS		_WINTERNL__FILE_INFORMATION_CLASS
+#define FileDirectoryInformation	_WINTERNL_FileDirectoryInformation
+#endif
 
 #include <winternl.h>
 
-// #undef FILE_INFORMATION_CLASS
-// #undef _FILE_INFORMATION_CLASS
-// #undef FileDirectoryInformation
+#ifndef __MINGW32__
+#undef FILE_INFORMATION_CLASS
+#undef _FILE_INFORMATION_CLASS
+#undef FileDirectoryInformation
+#endif
 
 #endif
 
-#if !defined(_WIN32)
+#if !defined(__MINGW32__)
 typedef enum _FILE_INFORMATION_CLASS
 {
 	FileDirectoryInformation = 1,

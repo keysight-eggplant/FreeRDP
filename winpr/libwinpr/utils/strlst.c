@@ -233,8 +233,13 @@ static int extract_separated_substrings(const char* string, const char* separato
 		{
 			if (result != NULL)
 			{
+#if defined(_WIN32)
+                result[i] = malloc(sublen);
+                strncpy_s(result[i], sublen, string, sublen);
+#else
 				result[i] = strndup(string, sublen);
-			}
+#endif
+            }
 
 			i++;
 		}

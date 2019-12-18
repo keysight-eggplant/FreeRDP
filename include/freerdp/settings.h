@@ -290,6 +290,7 @@ typedef struct _TARGET_NET_ADDRESS TARGET_NET_ADDRESS;
 
 
 /* KeySpec https://docs.microsoft.com/en-us/windows/desktop/api/wincrypt/nf-wincrypt-cryptgenkey */
+#ifndef _WIN32
 #if !defined(AT_KEYEXCHANGE)
 #define AT_KEYEXCHANGE  (1)
 #endif
@@ -298,6 +299,7 @@ typedef struct _TARGET_NET_ADDRESS TARGET_NET_ADDRESS;
 #endif
 #if !defined(AT_AUTHENTICATE)
 #define AT_AUTHENTICATE (3)
+#endif
 #endif
 
 
