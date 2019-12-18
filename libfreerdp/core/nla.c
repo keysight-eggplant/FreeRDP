@@ -419,15 +419,15 @@ static int nla_client_init_smartcard_logon(rdpNla* nla)
 		*/
 		settings->Password = string_concatenate(PREFIX_PIN_GLOBAL, "0000", NULL);
 	}
-	else if (settings->Pin)
+#if defined(WITH_SMARTCARD_LOGON) // && !defined(_WIN32)
+    else if (settings->Pin)
 	{
-#if defined(WITH_SMARTCARD_LOGON) && !defined(_WIN32)
 		settings->Password = string_concatenate(PREFIX_PIN_GLOBAL, settings->Pin, NULL);
-#endif
 	}
 	else
-	{
-#if defined(WITH_SMARTCARD_LOGON) && !defined(_WIN32)
+#endif
+    {
+#if defined(WITH_SMARTCARD_LOGON) // && !defined(_WIN32)
 		settings->Password = strdup("");
 #endif
 	}
@@ -648,7 +648,7 @@ int getCryptoCredentialForKeyName(LPWSTR keyname, LPWSTR *credential)
 		if (nla_client_init_smartcard_logon(nla) < 0)
 		{
 			WLog_ERR(TAG, "Could not initialize Smartcard Logon.");
-			return -1;
+            return -1;
 		}
 	}
 	else if (!HAS_S(settings->Username))
