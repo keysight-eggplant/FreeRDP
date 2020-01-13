@@ -487,7 +487,7 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 												free(pusage);
 												break;
 											}
-											else if (status && (0 < pusage->cUsageIdentifier))
+											else if (status && (0 == pusage->cUsageIdentifier))
 											{
 												WLog_INFO(TAG, "Certificate enhanced key usage: ALL ALLOWED\n");
 											}
