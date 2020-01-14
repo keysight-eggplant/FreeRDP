@@ -547,16 +547,20 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 									if (false == CertGetNameString(pcontext, CERT_NAME_UPN_TYPE, 0, NULL, namestring, 256))
 									{
 										WLog_ERR(TAG, "NCryptOpenKey error getting upn: %d (0x%0X)\n", GetLastError(), GetLastError());
+#if 0
 										scquery_result_free(identity);
 										identity = NULL;
 										break;
+#endif
 									}
 									else if (0 == wcslen(namestring))
 									{
 										WLog_ERR(TAG, "NCryptOpenKey upn unavailable");
+#if 0
 										scquery_result_free(identity);
 										identity = NULL;
 										break;
+#endif
 									}
 									else
 									{
