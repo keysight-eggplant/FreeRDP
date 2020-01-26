@@ -361,28 +361,24 @@ static int nla_client_init_smartcard_logon(rdpNla* nla)
 		return -1;
 	}
 #else
-#if 0
 	// Obtain canonocalized user hint hack (for now)...TGT obtained using NEGOTIATE package...
 	if (NULL == settings->UserPrincipalName)
 	{
-		WLog_ERR(TAG, "UserPrincipalName is NULL!");
-		return -1;
+		WLog_INFO(TAG, "UserPrincipalName is NULL!");
 	}
 	else
 	{
 		settings->CanonicalizedUserHint = string_concatenate(settings->UserPrincipalName, "", NULL);
 		if (NULL == settings->CanonicalizedUserHint)
 		{
-			WLog_ERR(TAG, "CanonicalizedUserHint is NULL!");
-			return -1;
+			WLog_INFO(TAG, "CanonicalizedUserHint is NULL!");
 		}
 		else
 		{
 			char *ptr = strchr(settings->CanonicalizedUserHint, '@');
 			if (NULL == ptr)
 			{
-				WLog_ERR(TAG, "UserPrincipalName/CanonicalizedUserHint is not of the correct form: %s", settings->UserPrincipalName);
-				return -1;
+				WLog_INFO(TAG, "UserPrincipalName/CanonicalizedUserHint is not of the correct form: %s", settings->UserPrincipalName);
 			}
 			else
 			{
@@ -392,7 +388,6 @@ static int nla_client_init_smartcard_logon(rdpNla* nla)
 			}
 		}
 	}
-#endif
 #endif
 
 #else
@@ -452,22 +447,18 @@ static int nla_client_init_smartcard_logon(rdpNla* nla)
 #endif
 
 	if (NULL != settings->Domain)
+	{
 		CHECK_MEMORY(settings->DomainHint = strdup(settings->Domain),  /* They're freed separately! */
 					 -1, "Could not strdup the Domain (length = %d)",
 					 strlen(settings->Domain));
-
-#if 0
-	if (settings->CanonicalizedUserHint == NULL)
-	{
-		WLog_ERR(TAG, "Missing Canonicalized User Hint (Domain Hint = %s,  UPN = %s).",
-		         settings->DomainHint, settings->UserPrincipalName);
-		return -1;
 	}
-
-	CHECK_MEMORY((settings->UserHint = strdup(settings->CanonicalizedUserHint)),
-	             -1, "Could not strdup the CanonicalizedUserHint (length = %d)",
-	             strlen(settings->CanonicalizedUserHint));
-#endif
+	
+	if (NULL != settings->CanonicalizedUserHint)
+	{
+		CHECK_MEMORY((settings->UserHint = strdup(settings->CanonicalizedUserHint)),
+					 -1, "Could not strdup the CanonicalizedUserHint (length = %d)",
+					 strlen(settings->CanonicalizedUserHint));
+	}
 
 	WLog_INFO(TAG, "Canonicalized User Hint = %s,  Domain Hint = %s,  UPN = %s IdCertificate: %s",
 	          settings->CanonicalizedUserHint, settings->DomainHint, settings->UserPrincipalName, settings->IdCertificate);
@@ -488,7 +479,8 @@ static int nla_client_init_smartcard_logon(rdpNla* nla)
 		return -1;
 	}
 
-	WLog_DBG(TAG, "smartcard CardName=%s", settings->CardName);
+	WLog_DBG(TAG, "smartcard UserHint=%s", settings->UserHint);
+	WLog_DBG(TAG, "smartcard DomainHint=%s", settings->DomainHint);
 	WLog_DBG(TAG, "smartcard ReaderName=%s", settings->ReaderName);
 	WLog_DBG(TAG, "smartcard ContainerName=%s", settings->ContainerName);
 	WLog_DBG(TAG, "smartcard CspName=%s", settings->CspName);
@@ -740,9 +732,42 @@ int getCryptoCredentialForKeyName(LPWSTR keyname, LPWSTR *credential)
 	SEC_WINNT_AUTH_IDENTITY_EXW ClientAuthID;
     if (nla->identity->cred_type == credential_type_smartcard)
 	{
-		WLog_ERR(TAG, "QuerySecurityPackageInfo status %s [0x%08" PRIX32 "]",
-		         GetSecurityStatusString(nla->status), nla->status);
-		return -1;
+		if (TRUE) //(NULL == settings->UserPrincipalName)
+		{
+			// If there is no user principal name then we can't use the certificate for the initial network
+			// level authentication.  We will have to assume the user is logged into an account that
+			// will allow us to obtain a NLA sequence...
+			WLog_DBG(TAG, "Smart card proccessing: using default logged in account");
+			pClientAuthID = NULL;
+		}
+		else
+		{
+			WLog_DBG(TAG, "Smart card processing: creating marshalled credential from smartcard keyname: %s", settings->IdCertificate);
+			pClientAuthID = (PSEC_WINNT_AUTH_IDENTITY)&ClientAuthID;
+
+			// Initialize the memory
+			ZeroMemory(&ClientAuthID, sizeof(ClientAuthID));
+
+			// Generate the marshalled credentisl from the certificate requested...
+			LPTSTR marshalledCredentials = getMarshaledCredentials(settings->IdCertificate);
+			if (NULL == marshalledCredentials)
+			{
+				auth_identity_free(nla->identity);
+				return 0;
+			}
+
+			ClientAuthID.Version        = SEC_WINNT_AUTH_IDENTITY_VERSION;
+			ClientAuthID.Length         = sizeof(ClientAuthID);
+			ClientAuthID.User           = (PUSHORT)marshalledCredentials;
+			ClientAuthID.UserLength     = wcslen(marshalledCredentials);
+			ClientAuthID.Password       = (PUSHORT)stringX_from_cstring(settings->Pin);
+			ClientAuthID.PasswordLength = strlen(settings->Pin);
+			ClientAuthID.Domain         = NULL;
+			ClientAuthID.DomainLength   = 0;
+			ClientAuthID.Flags          = SEC_WINNT_AUTH_IDENTITY_UNICODE;
+			ClientAuthID.PackageList    = NULL;
+			ClientAuthID.PackageListLength = 0;
+		}
 	}
 #endif
 
@@ -756,7 +781,7 @@ int getCryptoCredentialForKeyName(LPWSTR keyname, LPWSTR *credential)
 	                                                   &nla->credentials, &nla->expiration);
 
 #if defined(WITH_SMARTCARD_LOGON) && defined(_WIN32)
-    if (nla->identity->cred_type == credential_type_smartcard)
+    if ((NULL != pClientAuthID) && (nla->identity->cred_type == credential_type_smartcard))
 	{
 		free(ClientAuthID.User);
 		free(ClientAuthID.Password);
@@ -930,7 +955,14 @@ static int nla_client_recv(rdpNla* nla)
 		WLog_VRB(TAG, "InitializeSecurityContext  %s [0x%08" PRIX32 "]",
 		         GetSecurityStatusString(nla->status), nla->status);
 
-		sspi_SecBufferFree(&nla->inputBuffer);
+#if defined (WITH_DEBUG_NLA)
+		WLog_DBG(TAG, "InitializeSecurityContext (2)");
+		WLog_DBG(TAG, "ServicePrincipalName (2): %ls", nla->ServicePrincipalName);
+		WLog_DBG(TAG, "negoToken (2): %d", nla->negoToken.cbBuffer);
+		winpr_HexDump(TAG, WLOG_DEBUG, nla->negoToken.pvBuffer, nla->negoToken.cbBuffer);
+		WLog_DBG(TAG, "outputBuffer (2): %d", nla->outputBuffer.cbBuffer);
+		winpr_HexDump(TAG, WLOG_DEBUG, nla->outputBuffer.pvBuffer, nla->outputBuffer.cbBuffer);
+#endif
 
 		if ((nla->status == SEC_I_COMPLETE_AND_CONTINUE) || (nla->status == SEC_I_COMPLETE_NEEDED))
 		{
