@@ -63,7 +63,7 @@
 #include <krb5.h>
 #include <winpr/library.h>
 static UINT32 transport_krb5_check_account(rdpTransport* transport, char* username, char* domain,
-                                           char* passwd)
+        char* passwd)
 {
 	krb5_error_code ret;
 	krb5_context context = NULL;
@@ -157,43 +157,43 @@ static void transport_ssl_cb(SSL* ssl, int where, int ret)
 {
 	if (where & SSL_CB_ALERT)
 	{
-		rdpTransport* transport = (rdpTransport*)SSL_get_app_data(ssl);
+		rdpTransport* transport = (rdpTransport*) SSL_get_app_data(ssl);
 
 		switch (ret)
 		{
 			case (SSL3_AL_FATAL << 8) | SSL_AD_ACCESS_DENIED:
-			{
-				if (!freerdp_get_last_error(transport->context))
 				{
-					WLog_Print(transport->log, WLOG_ERROR, "%s: ACCESS DENIED", __FUNCTION__);
+					if (!freerdp_get_last_error(transport->context))
+					{
+						WLog_Print(transport->log, WLOG_ERROR, "%s: ACCESS DENIED", __FUNCTION__);
 					freerdp_set_last_error_log(transport->context,
 					                           FREERDP_ERROR_AUTHENTICATION_FAILED);
+					}
 				}
-			}
-			break;
+				break;
 
 			case (SSL3_AL_FATAL << 8) | SSL_AD_INTERNAL_ERROR:
-			{
-				if (transport->NlaMode)
 				{
-					UINT32 kret = 0;
-#ifdef WITH_GSSAPI
-
-					if ((strlen(transport->settings->Domain) != 0) &&
-					    (strncmp(transport->settings->Domain, ".", 1) != 0))
+					if (transport->NlaMode)
 					{
+						UINT32 kret = 0;
+#ifdef WITH_GSSAPI
+						if ((transport->settings->Domain!= NULL) &&
+							(strlen(transport->settings->Domain) != 0) &&
+						    (strncmp(transport->settings->Domain, ".", 1) != 0))
+						{
 						kret = transport_krb5_check_account(
 						    transport, transport->settings->Username, transport->settings->Domain,
-						    transport->settings->Password);
-					}
-					else
+							                                    transport->settings->Password);
+						}
+						else
 #endif /* WITH_GSSAPI */
-						kret = FREERDP_ERROR_CONNECT_PASSWORD_CERTAINLY_EXPIRED;
+							kret = FREERDP_ERROR_CONNECT_PASSWORD_CERTAINLY_EXPIRED;
 
 					freerdp_set_last_error_if_not(transport->context, kret);
-				}
+					}
 
-				break;
+					break;
 
 				case (SSL3_AL_WARNING << 8) | SSL3_AD_CLOSE_NOTIFY:
 					break;
@@ -203,7 +203,7 @@ static void transport_ssl_cb(SSL* ssl, int where, int ret)
 					           "Unhandled SSL error (where=%d, ret=%d [%s, %s])", where, ret,
 					           SSL_alert_type_string_long(ret), SSL_alert_desc_string_long(ret));
 					break;
-			}
+				}
 		}
 	}
 }
@@ -347,6 +347,8 @@ BOOL transport_connect_nla(rdpTransport* transport)
 		freerdp_set_last_error_if_not(context, FREERDP_ERROR_AUTHENTICATION_FAILED);
 
 		transport_set_nla_mode(transport, FALSE);
+		nla_free(rdp->nla);
+		rdp->nla = NULL;
 		return FALSE;
 	}
 
@@ -414,7 +416,7 @@ BOOL transport_connect(rdpTransport* transport, const char* hostname, UINT16 por
 	else
 	{
 		UINT16 peerPort;
-		const char *proxyHostname, *proxyUsername, *proxyPassword;
+		const char* proxyHostname, *proxyUsername, *proxyPassword;
 		BOOL isProxyConnection =
 		    proxy_prepare(settings, &proxyHostname, &peerPort, &proxyUsername, &proxyPassword);
 
@@ -467,7 +469,7 @@ BOOL transport_accept_tls(rdpTransport* transport)
 BOOL transport_accept_nla(rdpTransport* transport)
 {
 	rdpSettings* settings = transport->settings;
-	freerdp* instance = (freerdp*)settings->instance;
+	freerdp* instance = (freerdp*) settings->instance;
 
 	if (!transport->tls)
 		transport->tls = tls_new(transport->settings);
@@ -1145,7 +1147,7 @@ BOOL transport_disconnect(rdpTransport* transport)
 rdpTransport* transport_new(rdpContext* context)
 {
 	rdpTransport* transport;
-	transport = (rdpTransport*)calloc(1, sizeof(rdpTransport));
+	transport = (rdpTransport*) calloc(1, sizeof(rdpTransport));
 
 	if (!transport)
 		return NULL;

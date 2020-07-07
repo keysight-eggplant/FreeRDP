@@ -36,6 +36,7 @@
 
 #define TAG FREERDP_TAG("core.nego")
 
+#if 0 // TESTPLANT-MAL-07072020: Moved to header file...
 struct rdp_nego
 {
 	UINT16 port;
@@ -64,6 +65,7 @@ struct rdp_nego
 
 	rdpTransport* transport;
 };
+#endif
 
 static const char* nego_state_string(NEGO_STATE state)
 {
@@ -361,7 +363,7 @@ BOOL nego_send_preconnection_pdu(rdpNego* nego)
 
 	if (nego->PreconnectionBlob)
 	{
-		cchPCB = (UINT16)ConvertToUnicode(CP_UTF8, 0, nego->PreconnectionBlob, -1, &wszPCB, 0);
+		cchPCB = (UINT16) ConvertToUnicode(CP_UTF8, 0, nego->PreconnectionBlob, -1, &wszPCB, 0);
 		cchPCB += 1; /* zero-termination */
 		cbSize += cchPCB * 2;
 	}
@@ -375,11 +377,11 @@ BOOL nego_send_preconnection_pdu(rdpNego* nego)
 		return FALSE;
 	}
 
-	Stream_Write_UINT32(s, cbSize);                /* cbSize */
-	Stream_Write_UINT32(s, 0);                     /* Flags */
-	Stream_Write_UINT32(s, PRECONNECTION_PDU_V2);  /* Version */
+	Stream_Write_UINT32(s, cbSize); /* cbSize */
+	Stream_Write_UINT32(s, 0); /* Flags */
+	Stream_Write_UINT32(s, PRECONNECTION_PDU_V2); /* Version */
 	Stream_Write_UINT32(s, nego->PreconnectionId); /* Id */
-	Stream_Write_UINT16(s, cchPCB);                /* cchPCB */
+	Stream_Write_UINT16(s, cchPCB); /* cchPCB */
 
 	if (wszPCB)
 	{
@@ -602,7 +604,7 @@ int nego_recv(rdpTransport* transport, wStream* s, void* extra)
 	BYTE li;
 	BYTE type;
 	UINT16 length;
-	rdpNego* nego = (rdpNego*)extra;
+	rdpNego* nego = (rdpNego*) extra;
 
 	if (!tpkt_read_header(s, &length))
 		return -1;
@@ -620,7 +622,7 @@ int nego_recv(rdpTransport* transport, wStream* s, void* extra)
 			case TYPE_RDP_NEG_RSP:
 				if (!nego_process_negotiation_response(nego, s))
 					return -1;
-				WLog_DBG(TAG, "selected_protocol: %" PRIu32 "", nego->SelectedProtocol);
+				WLog_DBG(TAG, "selected_protocol: %"PRIu32"", nego->SelectedProtocol);
 
 				/* enhanced security selected ? */
 
@@ -793,7 +795,7 @@ BOOL nego_read_request(rdpNego* nego, wStream* s)
 
 		if (type != TYPE_RDP_NEG_REQ)
 		{
-			WLog_ERR(TAG, "Incorrect negotiation request type %" PRIu8 "", type);
+			WLog_ERR(TAG, "Incorrect negotiation request type %"PRIu8"", type);
 			return FALSE;
 		}
 
@@ -879,13 +881,13 @@ BOOL nego_send_negotiation_request(rdpNego* nego)
 			cookie_length = nego->CookieMaxLength;
 
 		Stream_Write(s, "Cookie: mstshash=", 17);
-		Stream_Write(s, (BYTE*)nego->cookie, cookie_length);
+		Stream_Write(s, (BYTE*) nego->cookie, cookie_length);
 		Stream_Write_UINT8(s, 0x0D); /* CR */
 		Stream_Write_UINT8(s, 0x0A); /* LF */
 		length += cookie_length + 19;
 	}
 
-	WLog_DBG(TAG, "RequestedProtocols: %" PRIu32 "", nego->RequestedProtocols);
+	WLog_DBG(TAG, "RequestedProtocols: %"PRIu32"", nego->RequestedProtocols);
 
 	if ((nego->RequestedProtocols > PROTOCOL_RDP) || (nego->sendNegoData))
 	{
@@ -895,7 +897,7 @@ BOOL nego_send_negotiation_request(rdpNego* nego)
 
 		Stream_Write_UINT8(s, TYPE_RDP_NEG_REQ);
 		Stream_Write_UINT8(s, flags);
-		Stream_Write_UINT16(s, 8);                        /* RDP_NEG_DATA length (8) */
+		Stream_Write_UINT16(s, 8); /* RDP_NEG_DATA length (8) */
 		Stream_Write_UINT32(s, nego->RequestedProtocols); /* requestedProtocols */
 		length += 8;
 	}
@@ -931,7 +933,7 @@ BOOL nego_process_negotiation_request(rdpNego* nego, wStream* s)
 	Stream_Read_UINT8(s, flags);
 	Stream_Read_UINT16(s, length);
 	Stream_Read_UINT32(s, nego->RequestedProtocols);
-	WLog_DBG(TAG, "RDP_NEG_REQ: RequestedProtocol: 0x%08" PRIX32 "", nego->RequestedProtocols);
+	WLog_DBG(TAG, "RDP_NEG_REQ: RequestedProtocol: 0x%08"PRIX32"", nego->RequestedProtocols);
 	nego->state = NEGO_STATE_FINAL;
 	return TRUE;
 }
@@ -1004,7 +1006,7 @@ BOOL nego_process_negotiation_failure(rdpNego* nego, wStream* s)
 			break;
 
 		default:
-			WLog_ERR(TAG, "Error: Unknown protocol security error %" PRIu32 "", failureCode);
+			WLog_ERR(TAG, "Error: Unknown protocol security error %"PRIu32"", failureCode);
 			break;
 	}
 
@@ -1045,7 +1047,7 @@ BOOL nego_send_negotiation_response(rdpNego* nego)
 		flags = 0;
 		Stream_Write_UINT8(s, TYPE_RDP_NEG_FAILURE);
 		Stream_Write_UINT8(s, flags); /* flags */
-		Stream_Write_UINT16(s, 8);    /* RDP_NEG_DATA length (8) */
+		Stream_Write_UINT16(s, 8); /* RDP_NEG_DATA length (8) */
 		Stream_Write_UINT32(s, errorCode);
 		length += 8;
 		status = FALSE;
@@ -1059,8 +1061,8 @@ BOOL nego_send_negotiation_response(rdpNego* nego)
 
 		/* RDP_NEG_DATA must be present for TLS, NLA, and RDP */
 		Stream_Write_UINT8(s, TYPE_RDP_NEG_RSP);
-		Stream_Write_UINT8(s, flags);                   /* flags */
-		Stream_Write_UINT16(s, 8);                      /* RDP_NEG_DATA length (8) */
+		Stream_Write_UINT8(s, flags); /* flags */
+		Stream_Write_UINT16(s, 8); /* RDP_NEG_DATA length (8) */
 		Stream_Write_UINT32(s, nego->SelectedProtocol); /* selectedProtocol */
 		length += 8;
 	}
@@ -1164,7 +1166,7 @@ void nego_init(rdpNego* nego)
 
 rdpNego* nego_new(rdpTransport* transport)
 {
-	rdpNego* nego = (rdpNego*)calloc(1, sizeof(rdpNego));
+	rdpNego* nego = (rdpNego*) calloc(1, sizeof(rdpNego));
 
 	if (!nego)
 		return NULL;
@@ -1308,7 +1310,7 @@ BOOL nego_set_routing_token(rdpNego* nego, BYTE* RoutingToken, DWORD RoutingToke
 
 	free(nego->RoutingToken);
 	nego->RoutingTokenLength = RoutingTokenLength;
-	nego->RoutingToken = (BYTE*)malloc(nego->RoutingTokenLength);
+	nego->RoutingToken = (BYTE*) malloc(nego->RoutingTokenLength);
 
 	if (!nego->RoutingToken)
 		return FALSE;

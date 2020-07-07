@@ -128,6 +128,9 @@ set(${MODULE_PREFIX}_SRCS
 	window.h
 	listener.c
 	listener.h
+    smartcardlogon.h
+    tscredentials.c
+    tscredentials.h
 	peer.c
 	peer.h
 	display.c
@@ -135,12 +138,13 @@ set(${MODULE_PREFIX}_SRCS
 
 set(${MODULE_PREFIX}_SRCS ${${MODULE_PREFIX}_SRCS} ${${MODULE_PREFIX}_GATEWAY_SRCS})
 
-freerdp_module_add(${${MODULE_PREFIX}_SRCS})
-
 if(WIN32)
+	set(${MODULE_PREFIX}_SRCS ${${MODULE_PREFIX}_SRCS} smartcardlogon.c)
 	set(${MODULE_PREFIX}_LIBS ${${MODULE_PREFIX}_LIBS} ws2_32)
 	freerdp_library_add(ws2_32)
 endif()
+
+freerdp_module_add(${${MODULE_PREFIX}_SRCS})
 
 freerdp_library_add(${OPENSSL_LIBRARIES})
 

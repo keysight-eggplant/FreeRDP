@@ -236,8 +236,14 @@ BOOL rdp_client_connect(rdpRdp* rdp)
 	UINT32 timeout;
 
 	if (!rdp_client_reset_codecs(rdp->context))
-		return FALSE;
-
+	{
+		WLog_INFO(TAG, "Warning: rdp_client_reset_codecs failure");
+		// We're not going to make this a failure as some clients do
+		// not have the minimum (fplat.dll) necesary installed on their
+		// systems...
+		//return FALSE;
+	}
+	
 	if (settings->FIPSMode)
 		flags |= WINPR_SSL_INIT_ENABLE_FIPS;
 

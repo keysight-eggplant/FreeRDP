@@ -58,7 +58,7 @@
 /* connectErrorCode is 'extern' in error.h. See comment there.*/
 
 UINT freerdp_channel_add_init_handle_data(rdpChannelHandles* handles, void* pInitHandle,
-                                          void* pUserData)
+        void* pUserData)
 {
 	if (!handles->init)
 		handles->init = ListDictionary_New(TRUE);
@@ -97,9 +97,9 @@ void freerdp_channel_remove_init_handle_data(rdpChannelHandles* handles, void* p
 }
 
 UINT freerdp_channel_add_open_handle_data(rdpChannelHandles* handles, DWORD openHandle,
-                                          void* pUserData)
+        void* pUserData)
 {
-	void* pOpenHandle = (void*)(size_t)openHandle;
+	void* pOpenHandle = (void*)(size_t) openHandle;
 
 	if (!handles->open)
 		handles->open = ListDictionary_New(TRUE);
@@ -122,14 +122,14 @@ UINT freerdp_channel_add_open_handle_data(rdpChannelHandles* handles, DWORD open
 void* freerdp_channel_get_open_handle_data(rdpChannelHandles* handles, DWORD openHandle)
 {
 	void* pUserData = NULL;
-	void* pOpenHandle = (void*)(size_t)openHandle;
+	void* pOpenHandle = (void*)(size_t) openHandle;
 	pUserData = ListDictionary_GetItemValue(handles->open, pOpenHandle);
 	return pUserData;
 }
 
 void freerdp_channel_remove_open_handle_data(rdpChannelHandles* handles, DWORD openHandle)
 {
-	void* pOpenHandle = (void*)(size_t)openHandle;
+	void* pOpenHandle = (void*)(size_t) openHandle;
 	ListDictionary_Remove(handles->open, pOpenHandle);
 
 	if (ListDictionary_Count(handles->open) < 1)
@@ -199,7 +199,7 @@ BOOL freerdp_connect(freerdp* instance)
 	/* --authonly tests the connection without a UI */
 	if (instance->settings->AuthenticationOnly)
 	{
-		WLog_ERR(TAG, "Authentication only, exit status %" PRId32 "", !status);
+		WLog_ERR(TAG, "Authentication only, exit status %"PRId32"", !status);
 		goto freerdp_connect_finally;
 	}
 
@@ -383,7 +383,7 @@ BOOL freerdp_check_event_handles(rdpContext* context)
 	if (!status)
 	{
 		if (freerdp_get_last_error(context) == FREERDP_ERROR_SUCCESS)
-			WLog_ERR(TAG, "freerdp_check_fds() failed - %" PRIi32 "", status);
+			WLog_ERR(TAG, "freerdp_check_fds() failed - %"PRIi32"", status);
 
 		return FALSE;
 	}
@@ -393,7 +393,7 @@ BOOL freerdp_check_event_handles(rdpContext* context)
 	if (!status)
 	{
 		if (freerdp_get_last_error(context) == FREERDP_ERROR_SUCCESS)
-			WLog_ERR(TAG, "freerdp_channels_check_fds() failed - %" PRIi32 "", status);
+			WLog_ERR(TAG, "freerdp_channels_check_fds() failed - %"PRIi32"", status);
 
 		return FALSE;
 	}
@@ -403,7 +403,7 @@ BOOL freerdp_check_event_handles(rdpContext* context)
 	if (!status)
 	{
 		if (freerdp_get_last_error(context) == FREERDP_ERROR_SUCCESS)
-			WLog_ERR(TAG, "checkChannelErrorEvent() failed - %" PRIi32 "", status);
+			WLog_ERR(TAG, "checkChannelErrorEvent() failed - %"PRIi32"", status);
 
 		return FALSE;
 	}
@@ -624,7 +624,7 @@ static wEventType FreeRDP_Events[] = {
 	                DEFINE_EVENT_ENTRY(ConnectionResult) DEFINE_EVENT_ENTRY(ChannelConnected)
 	                    DEFINE_EVENT_ENTRY(ChannelDisconnected) DEFINE_EVENT_ENTRY(MouseEvent)
 	                        DEFINE_EVENT_ENTRY(Activated) DEFINE_EVENT_ENTRY(Timer)
-	                            DEFINE_EVENT_ENTRY(GraphicsReset)
+	DEFINE_EVENT_ENTRY(GraphicsReset)
 };
 
 /** Allocator function for a rdp context.
@@ -642,7 +642,7 @@ BOOL freerdp_context_new(freerdp* instance)
 	rdpRdp* rdp;
 	rdpContext* context;
 	BOOL ret = TRUE;
-	instance->context = (rdpContext*)calloc(1, instance->ContextSize);
+	instance->context = (rdpContext*) calloc(1, instance->ContextSize);
 
 	if (!instance->context)
 		return FALSE;
@@ -1003,7 +1003,7 @@ const char* freerdp_get_logon_error_info_data(UINT32 data)
 freerdp* freerdp_new(void)
 {
 	freerdp* instance;
-	instance = (freerdp*)calloc(1, sizeof(freerdp));
+	instance = (freerdp*) calloc(1, sizeof(freerdp));
 
 	if (!instance)
 		return NULL;
@@ -1020,6 +1020,11 @@ freerdp* freerdp_new(void)
  */
 void freerdp_free(freerdp* instance)
 {
+	if (instance->saved_identity != NULL)
+	{
+		instance->saved_identity->free(instance->saved_identity);
+	}
+
 	free(instance);
 }
 
@@ -1076,7 +1081,7 @@ BOOL checkChannelErrorEvent(rdpContext* context)
 {
 	if (WaitForSingleObject(context->channelErrorEvent, 0) == WAIT_OBJECT_0)
 	{
-		WLog_ERR(TAG, "%s. Error was %" PRIu32 "", context->errorDescription,
+		WLog_ERR(TAG, "%s. Error was %"PRIu32"", context->errorDescription,
 		         context->channelErrorNum);
 		return FALSE;
 	}
@@ -1120,3 +1125,14 @@ const char* freerdp_nego_get_routing_token(rdpContext* context, DWORD* length)
 
 	return (const char*)nego_get_routing_token(context->rdp->nego, length);
 }
+
+freerdp_blob* freerdp_saved_identity(freerdp* instance)
+{
+	return instance->saved_identity;
+}
+
+void freerdp_save_identity(freerdp* instance, freerdp_blob* identity)
+{
+	instance->saved_identity = identity;
+}
+

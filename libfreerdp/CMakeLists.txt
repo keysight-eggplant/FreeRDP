@@ -240,6 +240,17 @@ if(WITH_FFMPEG)
     freerdp_library_add(${FFMPEG_LIBRARIES})
 endif()
 
+if(WITH_KERBEROS)
+	freerdp_definition_add(-DWITH_KERBEROS)
+endif()
+
+if(WITH_SMARTCARD_LOGON)
+	freerdp_definition_add(-DWITH_SMARTCARD_LOGON)
+	if(WIN32)
+		freerdp_library_add(kernel32 ncrypt credui)
+	endif()
+endif()
+
 if(WIN32 AND WITH_MEDIA_FOUNDATION)
     set(CODEC_SRCS ${CODEC_SRCS} codec/h264_mf.c)
 endif()

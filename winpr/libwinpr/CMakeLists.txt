@@ -91,6 +91,10 @@ if (ANDROID)
     winpr_library_add_private(log)
 endif()
 
+if (MINGW)
+    winpr_library_add(glib-2.0)
+endif()
+
 # Level "1" API as defined for MinCore.lib
 set(WINPR_CORE synch locale library file comm pipe interlocked security
 	environment crypto registry credentials path io memory input shell
