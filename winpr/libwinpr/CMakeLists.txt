@@ -92,7 +92,7 @@ if (ANDROID)
 endif()
 
 if (MINGW)
-    winpr_library_add(glib-2.0)
+    winpr_library_add_private(glib-2.0)
 endif()
 
 # Level "1" API as defined for MinCore.lib
