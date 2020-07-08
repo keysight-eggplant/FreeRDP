@@ -249,46 +249,6 @@ static BOOL value_to_uint(const char* value, ULONGLONG* result, ULONGLONG min, U
 	return TRUE;
 }
 
-static BOOL value_to_int(const char* value, LONGLONG* result, LONGLONG min, LONGLONG max)
-{
-	long long rc;
-
-	if (!value || !result)
-		return FALSE;
-
-	errno = 0;
-	rc = _strtoi64(value, NULL, 0);
-
-	if (errno != 0)
-		return FALSE;
-
-	if ((rc < min) || (rc > max))
-		return FALSE;
-
-	*result = rc;
-	return TRUE;
-}
-
-static BOOL value_to_uint(const char* value, ULONGLONG* result, ULONGLONG min, ULONGLONG max)
-{
-	unsigned long long rc;
-
-	if (!value || !result)
-		return FALSE;
-
-	errno = 0;
-	rc = _strtoui64(value, NULL, 0);
-
-	if (errno != 0)
-		return FALSE;
-
-	if ((rc < min) || (rc > max))
-		return FALSE;
-
-	*result = rc;
-	return TRUE;
-}
-
 BOOL freerdp_client_print_version(void)
 {
 	printf("This is FreeRDP version %s (%s)\n", FREERDP_VERSION_FULL, GIT_REVISION);
