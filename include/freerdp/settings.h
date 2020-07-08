@@ -1185,35 +1185,34 @@ struct rdp_settings
 	ALIGN64 UINT32 Password51Length;              /* 1281 */    /* NOT USED */
 	ALIGN64 BOOL   SmartcardLogon;      /* 1282 */
 	ALIGN64 BOOL PromptForCredentials; /* 1283 */
-	UINT64 padding1344[1344 - 1284];   /* 1284 */
-	ALIGN64 char*  Pkcs11Module;                  /* 1283 */
-	ALIGN64 BOOL   PinLoginRequired;              /* 1284 */
-	ALIGN64 BOOL   PinPadIsPresent;               /* 1285 */
-	ALIGN64 char*  Pin;                           /* 1286 */
-	ALIGN64 UINT32 KeySpec;                       /* 1287 */
-	ALIGN64 char*  CardName;                      /* 1288 */
-	ALIGN64 char*  ReaderName;                    /* 1289 */
-	ALIGN64 char*  ContainerName;                 /* 1290 */
-	ALIGN64 char*  CspName;                       /* 1291 */
-	ALIGN64 char*  UserHint;                      /* 1292 */
-	ALIGN64 char*  DomainHint;                    /* 1293 */
-	ALIGN64 UINT32 CredentialsType;               /* 1294 */
-	ALIGN64 char*  UserPrincipalName;             /* 1295 */
-	ALIGN64 char*  CanonicalizedUserHint;         /* 1296 */
-	ALIGN64 char*  IdCertificate;                 /* 1297 */
-	ALIGN64 UINT64 IdCertificateLength;           /* 1298 */
-	ALIGN64 char*  PkinitIdentity;                /* 1299 */
-	ALIGN64 char*  PkinitAnchors;                 /* 1300 */
-	ALIGN64 UINT64 SlotID;                        /* 1301 */
-	ALIGN64 char*  TokenLabel;                    /* 1302 */
-	ALIGN64 INT32  TokenFlags;                    /* 1303 */
-	ALIGN64 char*  KerberosStartTime;             /* 1304 */
-	ALIGN64 char*  KerberosLifeTime;              /* 1305 */
-	ALIGN64 char*  KerberosRenewableLifeTime;     /* 1306 */
-	ALIGN64 BOOL   Pkinit;                        /* 1307 */
-	ALIGN64 char*  PkinitCertificate;             /* 1308 */
-	ALIGN64 BOOL   Krb5Trace;             	      /* 1309 */
-	UINT64  padding1344[1344 - 1310];     	      /* 1310 */
+	ALIGN64 char*  Pkcs11Module;                  /* 1284 */
+	ALIGN64 BOOL   PinLoginRequired;              /* 1285 */
+	ALIGN64 BOOL   PinPadIsPresent;               /* 1286 */
+	ALIGN64 char*  Pin;                           /* 1287 */
+	ALIGN64 UINT32 KeySpec;                       /* 1288 */
+	ALIGN64 char*  CardName;                      /* 1289 */
+	ALIGN64 char*  ReaderName;                    /* 1290 */
+	ALIGN64 char*  ContainerName;                 /* 1291 */
+	ALIGN64 char*  CspName;                       /* 1292 */
+	ALIGN64 char*  UserHint;                      /* 1293 */
+	ALIGN64 char*  DomainHint;                    /* 1294 */
+	ALIGN64 UINT32 CredentialsType;               /* 1295 */
+	ALIGN64 char*  UserPrincipalName;             /* 1296 */
+	ALIGN64 char*  CanonicalizedUserHint;         /* 1297 */
+	ALIGN64 char*  IdCertificate;                 /* 1298 */
+	ALIGN64 UINT64 IdCertificateLength;           /* 1299 */
+	ALIGN64 char*  PkinitIdentity;                /* 1300 */
+	ALIGN64 char*  PkinitAnchors;                 /* 1301 */
+	ALIGN64 UINT64 SlotID;                        /* 1302 */
+	ALIGN64 char*  TokenLabel;                    /* 1303 */
+	ALIGN64 INT32  TokenFlags;                    /* 1304 */
+	ALIGN64 char*  KerberosStartTime;             /* 1305 */
+	ALIGN64 char*  KerberosLifeTime;              /* 1306 */
+	ALIGN64 char*  KerberosRenewableLifeTime;     /* 1307 */
+	ALIGN64 BOOL   Pkinit;                        /* 1308 */
+	ALIGN64 char*  PkinitCertificate;             /* 1309 */
+	ALIGN64 BOOL   Krb5Trace;             	      /* 1310 */
+	UINT64  padding1344[1344 - 1311];     	      /* 1311 */
 
 	/* Kerberos Authentication */
 	ALIGN64 char* KerberosKdc;   /* 1344 */
