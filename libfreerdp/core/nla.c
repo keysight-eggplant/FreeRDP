@@ -48,7 +48,6 @@
 
 //#include "../mit-krb5-pkinit/kinit.h"
 #include "nla.h"
-#include "smartcardlogon.h"
 #include "tscredentials.h"
 
 #define TAG FREERDP_TAG("core.nla")
@@ -730,9 +729,11 @@ int getCryptoCredentialForKeyName(LPWSTR keyname, LPWSTR *credential)
 #if defined(WITH_SMARTCARD_LOGON) && defined(_WIN32)
 	// This section allows the user logged in to be different from certificate AND outside of domain...
 	SEC_WINNT_AUTH_IDENTITY_EXW ClientAuthID;
-    if (nla->identity->cred_type == credential_type_smartcard)
+  if (nla->identity->cred_type == credential_type_smartcard)
 	{
-		if (TRUE) //(NULL == settings->UserPrincipalName)
+    // If smart card cross domain certificate attempts are enabled AND there is a
+    // user principal name in the certificate then...
+		if (FALSE == settings->CrossDomainLogin) || (NULL == settings->UserPrincipalName)
 		{
 			// If there is no user principal name then we can't use the certificate for the initial network
 			// level authentication.  We will have to assume the user is logged into an account that
