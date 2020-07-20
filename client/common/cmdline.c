@@ -3350,28 +3350,41 @@ int freerdp_client_settings_parse_command_line_arguments(rdpSettings* settings,
 		{
 			if (!settings->SmartcardLogon)
 				activate_smartcard_logon(settings);
+      settings->CrossDomainLogin = FALSE; // EggplantSoftware...
 		}
-		CommandLineSwitchCase(arg, "pin")
-		{
-			if (!settings->SmartcardLogon)
-			{
-				WLog_ERR(TAG, "/pin option can only be given after /smartcard-logon");
-				return COMMAND_LINE_ERROR;
-			}
-			else if (!copy_value(arg->Value, &settings->Pin))
-			{
-				return COMMAND_LINE_ERROR_MEMORY;
-			}
-
-			/* overwrite argument so it won't appear in ps */
-			p = arg->Value;
-
-			while (*p)
-				*(p++) = 'X';
-
-			while (*arg->Value)
-				*(arg->Value++) = 'X';
-		}
+    // ***** START EggplantSoftware Specific Smart Card Options *****
+    CommandLineSwitchCase(arg, "cross-domain-logon")
+    {
+      // See nla.c for details...
+      if (!settings->SmartcardLogon)
+      {
+        WLog_ERR(TAG, "/cross-domain-logon option can only be given after /smartcard-logon");
+        return COMMAND_LINE_ERROR;
+      }
+      settings->CrossDomainLogin = TRUE;
+    }
+    // ***** END EggplantSoftware Specific Smart Card Options *****
+    CommandLineSwitchCase(arg, "pin")
+    {
+      if (!settings->SmartcardLogon)
+      {
+        WLog_ERR(TAG, "/pin option can only be given after /smartcard-logon");
+        return COMMAND_LINE_ERROR;
+      }
+      else if (!copy_value(arg->Value, &settings->Pin))
+      {
+        return COMMAND_LINE_ERROR_MEMORY;
+      }
+      
+      /* overwrite argument so it won't appear in ps */
+      p = arg->Value;
+      
+      while (*p)
+        *(p++) = 'X';
+      
+      while (*arg->Value)
+        *(arg->Value++) = 'X';
+    }
 		CommandLineSwitchCase(arg, "pkcs11-module")
 		{
 			if (!settings->SmartcardLogon)

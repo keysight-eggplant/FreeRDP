@@ -139,7 +139,7 @@ set(${MODULE_PREFIX}_SRCS
 set(${MODULE_PREFIX}_SRCS ${${MODULE_PREFIX}_SRCS} ${${MODULE_PREFIX}_GATEWAY_SRCS})
 
 if(WIN32)
-	set(${MODULE_PREFIX}_SRCS ${${MODULE_PREFIX}_SRCS} smartcardlogon.c)
+	set(${MODULE_PREFIX}_SRCS ${${MODULE_PREFIX}_SRCS} smartcardlogon.c smartcard-windows.c.h smartcard-windows.c)
 	set(${MODULE_PREFIX}_LIBS ${${MODULE_PREFIX}_LIBS} ws2_32)
 	freerdp_library_add(ws2_32)
 endif()

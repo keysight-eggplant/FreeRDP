@@ -724,6 +724,7 @@ typedef struct _RDPDR_PARALLEL RDPDR_PARALLEL;
 #define FreeRDP_Krb5Trace                                          (1310)
 #define FreeRDP_KerberosKdc                                        (1344)
 #define FreeRDP_KerberosRealm                                      (1345)
+#define FreeRDP_CrossDomainLogin                                   (1346)
 #define FreeRDP_IgnoreCertificate                                  (1408)
 #define FreeRDP_CertificateName                                    (1409)
 #define FreeRDP_CertificateFile                                    (1410)
@@ -1216,8 +1217,9 @@ struct rdp_settings
 
 	/* Kerberos Authentication */
 	ALIGN64 char* KerberosKdc;   /* 1344 */
-	ALIGN64 char* KerberosRealm; /* 1345 */
-	UINT64 padding1408[1408 - 1346]; /* 1346 */
+  ALIGN64 char* KerberosRealm; /* 1345 */
+  ALIGN64 char* CrossDomainLogin; /* 1346 */
+	UINT64 padding1408[1408 - 1347]; /* 1347 */
 
 	/* Server Certificate */
 	ALIGN64 BOOL            IgnoreCertificate;             /* 1408 */
