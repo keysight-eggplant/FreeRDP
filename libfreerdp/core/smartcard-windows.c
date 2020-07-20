@@ -19,9 +19,15 @@
 
 #include <stdio.h>
 #include "smartcard-windows.h"
+#include <freerdp/log.h>
+#include <winpr/crypto.h>
 
 
 #if defined(WITH_SMARTCARD_LOGON) && defined(_WIN32)
+
+extern LPTSTR stringX_from_cstring(const char* cstring);
+
+#define TAG FREERDP_TAG("core.nla.smartcard")
 
 #define NTE_NO_MORE_ITEMS                (0x8009002AL)
 
