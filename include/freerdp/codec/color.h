@@ -367,13 +367,25 @@ extern "C"
 			/* 16bpp formats */
 			case PIXEL_FORMAT_RGB16:
 				if (_r)
-				*_r = (BYTE)((((color >> 11) & 0x1F) << 3) | ((color >> 13) & 0x7));
+				{
+					const UINT32 c = (color >> 11) & 0x1F;
+					const UINT32 val = (c << 3) + c / 4;
+					*_r = (BYTE)(val > 255 ? 255 : val);
+				}
 
 				if (_g)
-				*_g = (BYTE)((((color >> 5) & 0x3F) << 2) | ((color >> 9) & 0x3));
+				{
+					const UINT32 c = (color >> 5) & 0x3F;
+					const UINT32 val = (c << 2) + c / 4 / 2;
+					*_g = (BYTE)(val > 255 ? 255 : val);
+				}
 
 				if (_b)
-				*_b = (BYTE)(((color & 0x1F) << 3) | ((color >> 2) & 0x7));
+				{
+					const UINT32 c = (color)&0x1F;
+					const UINT32 val = (c << 3) + c / 4;
+					*_b = (BYTE)(val > 255 ? 255 : val);
+				}
 
 				if (_a)
 					*_a = 0xFF;
@@ -381,14 +393,26 @@ extern "C"
 				break;
 
 			case PIXEL_FORMAT_BGR16:
+				if (_r)
+				{
+					const UINT32 c = (color)&0x1F;
+					const UINT32 val = (c << 3) + c / 4;
+					*_r = (BYTE)(val > 255 ? 255 : val);
+				}
+
+				if (_g)
+				{
+					const UINT32 c = (color >> 5) & 0x3F;
+					const UINT32 val = (c << 2) + c / 4 / 2;
+					*_g = (BYTE)(val > 255 ? 255 : val);
+				}
+
 				if (_b)
-				*_b = (BYTE)((((color >> 11) & 0x1F) << 3) | ((color >> 13) & 0x7));
-
-			if (_g)
-				*_g = (BYTE)((((color >> 5) & 0x3F) << 2) | ((color >> 9) & 0x3));
-
-			if (_r)
-				*_r = (BYTE)(((color & 0x1F) << 3) | ((color >> 2) & 0x7));
+				{
+					const UINT32 c = (color >> 11) & 0x1F;
+					const UINT32 val = (c << 3) + c / 4;
+					*_b = (BYTE)(val > 255 ? 255 : val);
+				}
 
 				if (_a)
 					*_a = 0xFF;
@@ -397,13 +421,25 @@ extern "C"
 
 			case PIXEL_FORMAT_ARGB15:
 				if (_r)
-				*_r = (BYTE)(((color >> 10) & 0x1F) << 3);
+				{
+					const UINT32 c = (color >> 10) & 0x1F;
+					const UINT32 val = (c << 3) + c / 4;
+					*_r = (BYTE)(val > 255 ? 255 : val);
+				}
 
 				if (_g)
-				*_g = (BYTE)(((color >> 5) & 0x1F) << 3);
+				{
+					const UINT32 c = (color >> 5) & 0x1F;
+					const UINT32 val = (c << 3) + c / 4;
+					*_g = (BYTE)(val > 255 ? 255 : val);
+				}
 
 				if (_b)
-				*_b = (BYTE)((color & 0x1F) << 3);
+				{
+					const UINT32 c = (color)&0x1F;
+					const UINT32 val = (c << 3) + c / 4;
+					*_b = (BYTE)(val > 255 ? 255 : val);
+				}
 
 				if (_a)
 					*_a = color & 0x8000 ? 0xFF : 0x00;
@@ -411,14 +447,26 @@ extern "C"
 				break;
 
 			case PIXEL_FORMAT_ABGR15:
+				if (_r)
+				{
+					const UINT32 c = (color)&0x1F;
+					const UINT32 val = (c << 3) + c / 4;
+					*_r = (BYTE)(val > 255 ? 255 : val);
+				}
+
+				if (_g)
+				{
+					const UINT32 c = (color >> 5) & 0x1F;
+					const UINT32 val = (c << 3) + c / 4;
+					*_g = (BYTE)(val > 255 ? 255 : val);
+				}
+
 				if (_b)
-				*_b = (BYTE)(((color >> 10) & 0x1F) << 3);
-
-			if (_g)
-				*_g = (BYTE)(((color >> 5) & 0x1F) << 3);
-
-			if (_r)
-				*_r = (BYTE)((color & 0x1F) << 3);
+				{
+					const UINT32 c = (color >> 10) & 0x1F;
+					const UINT32 val = (c << 3) + c / 4;
+					*_b = (BYTE)(val > 255 ? 255 : val);
+				}
 
 				if (_a)
 					*_a = color & 0x8000 ? 0xFF : 0x00;
@@ -428,13 +476,25 @@ extern "C"
 			/* 15bpp formats */
 			case PIXEL_FORMAT_RGB15:
 				if (_r)
-				*_r = (BYTE)(((color >> 10) & 0x1F) << 3);
+				{
+					const UINT32 c = (color >> 10) & 0x1F;
+					const UINT32 val = (c << 3) + c / 4;
+					*_r = (BYTE)(val > 255 ? 255 : val);
+				}
 
 				if (_g)
-				*_g = (BYTE)(((color >> 5) & 0x1F) << 3);
+				{
+					const UINT32 c = (color >> 5) & 0x1F;
+					const UINT32 val = (c << 3) + c / 4;
+					*_g = (BYTE)(val > 255 ? 255 : val);
+				}
 
 				if (_b)
-				*_b = (BYTE)((color & 0x1F) << 3);
+				{
+					const UINT32 c = (color)&0x1F;
+					const UINT32 val = (c << 3) + c / 4;
+					*_b = (BYTE)(val > 255 ? 255 : val);
+				}
 
 				if (_a)
 					*_a = 0xFF;
@@ -442,14 +502,26 @@ extern "C"
 				break;
 
 			case PIXEL_FORMAT_BGR15:
+				if (_r)
+				{
+					const UINT32 c = (color)&0x1F;
+					const UINT32 val = (c << 3) + c / 4;
+					*_r = (BYTE)(val > 255 ? 255 : val);
+				}
+
+				if (_g)
+				{
+					const UINT32 c = (color >> 5) & 0x1F;
+					const UINT32 val = (c << 3) + c / 4;
+					*_g = (BYTE)(val > 255 ? 255 : val);
+				}
+
 				if (_b)
-				*_b = (BYTE)(((color >> 10) & 0x1F) << 3);
-
-			if (_g)
-				*_g = (BYTE)(((color >> 5) & 0x1F) << 3);
-
-			if (_r)
-				*_r = (BYTE)((color & 0x1F) << 3);
+				{
+					const UINT32 c = (color >> 10) & 0x1F;
+					const UINT32 val = (c << 3) + c / 4;
+					*_b = (BYTE)(val > 255 ? 255 : val);
+				}
 
 				if (_a)
 					*_a = 0xFF;
@@ -572,29 +644,25 @@ extern "C"
 
 			/* 16bpp formats */
 			case PIXEL_FORMAT_RGB16:
-			return (((_r >> 3) & 0x1F) << 11) | (((_g >> 2) & 0x3F) << 5) | ((
-			            _b >> 3) & 0x1F);
+				return (((_r >> 3) & 0x1F) << 11) | (((_g >> 2) & 0x3F) << 5) | ((_b >> 3) & 0x1F);
 
 			case PIXEL_FORMAT_BGR16:
-			return (((_b >> 3) & 0x1F) << 11) | (((_g >> 2) & 0x3F) << 5) | ((
-			            _r >> 3) & 0x1F);
+				return (((_b >> 3) & 0x1F) << 11) | (((_g >> 2) & 0x3F) << 5) | ((_r >> 3) & 0x1F);
 
 			case PIXEL_FORMAT_ARGB15:
-			return (((_r >> 3) & 0x1F) << 10) | (((_g >> 3) & 0x1F) << 5) | ((
-			            _b >> 3) & 0x1F) | (_a ? 0x8000 : 0x0000);
+				return (((_r >> 3) & 0x1F) << 10) | (((_g >> 3) & 0x1F) << 5) | ((_b >> 3) & 0x1F) |
+				       (_a ? 0x8000 : 0x0000);
 
 			case PIXEL_FORMAT_ABGR15:
-			return (((_b >> 3) & 0x1F) << 10) | (((_g >> 3) & 0x1F) << 5) | ((
-			            _r >> 3) & 0x1F) | (_a ? 0x8000 : 0x0000);
+				return (((_b >> 3) & 0x1F) << 10) | (((_g >> 3) & 0x1F) << 5) | ((_r >> 3) & 0x1F) |
+				       (_a ? 0x8000 : 0x0000);
 
 			/* 15bpp formats */
 			case PIXEL_FORMAT_RGB15:
-			return (((_r >> 3) & 0x1F) << 10) | (((_g >> 3) & 0x1F) << 5) | ((
-			            _b >> 3) & 0x1F);
+				return (((_r >> 3) & 0x1F) << 10) | (((_g >> 3) & 0x1F) << 5) | ((_b >> 3) & 0x1F);
 
 			case PIXEL_FORMAT_BGR15:
-			return (((_b >> 3) & 0x1F) << 10) | (((_g >> 3) & 0x1F) << 5) | ((
-			            _r >> 3) & 0x1F);
+				return (((_b >> 3) & 0x1F) << 10) | (((_g >> 3) & 0x1F) << 5) | ((_r >> 3) & 0x1F);
 
 			/* 8bpp formats */
 			case PIXEL_FORMAT_RGB8:
@@ -654,8 +722,8 @@ extern "C"
 		switch (GetBitsPerPixel(format))
 		{
 			case 32:
-			color = ((UINT32)src[0] << 24) | ((UINT32)src[1] << 16) |
-			        ((UINT32)src[2] << 8) | src[3];
+				color = ((UINT32)src[0] << 24) | ((UINT32)src[1] << 16) | ((UINT32)src[2] << 8) |
+				        src[3];
 				break;
 
 			case 24:
