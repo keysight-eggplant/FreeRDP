@@ -733,7 +733,7 @@ int getCryptoCredentialForKeyName(LPWSTR keyname, LPWSTR *credential)
 	{
     // If smart card cross domain certificate attempts are enabled AND there is a
     // user principal name in the certificate then...
-		if (FALSE == settings->CrossDomainLogin) || (NULL == settings->UserPrincipalName)
+		if ((FALSE == settings->CrossDomainLogin) || (NULL == settings->UserPrincipalName))
 		{
 			// If there is no user principal name then we can't use the certificate for the initial network
 			// level authentication.  We will have to assume the user is logged into an account that
