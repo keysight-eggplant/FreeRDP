@@ -1638,6 +1638,7 @@ static void activate_smartcard_logon(rdpSettings* settings)
 	/* We initialize all the settings, for all the variants of smartcard logon: */
 	settings->Pin = NULL;
 	settings->PinPadIsPresent = FALSE;
+  settings->CrossDomainLogin = FALSE; // EggplantSoftware...
 	copy_value("0s", &settings->KerberosStartTime);
 	/* Ticket lifetime value in seconds ; KDC default value : 600mn (i.e. 36000s) ; 600mn at maximum */
 	copy_value("10h", &settings->KerberosLifeTime);
@@ -3350,7 +3351,6 @@ int freerdp_client_settings_parse_command_line_arguments(rdpSettings* settings,
 		{
 			if (!settings->SmartcardLogon)
 				activate_smartcard_logon(settings);
-      settings->CrossDomainLogin = FALSE; // EggplantSoftware...
 		}
     // ***** START EggplantSoftware Specific Smart Card Options *****
     CommandLineSwitchCase(arg, "cross-domain-logon")

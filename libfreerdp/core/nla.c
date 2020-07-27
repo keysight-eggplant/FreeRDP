@@ -49,6 +49,9 @@
 //#include "../mit-krb5-pkinit/kinit.h"
 #include "nla.h"
 #include "tscredentials.h"
+#ifdef HAVE_CONFIG_H
+#include "smartcard-windows.h"
+#endif
 
 #define TAG FREERDP_TAG("core.nla")
 
@@ -559,12 +562,12 @@ static int nla_client_init(rdpNla* nla)
 			// If there is no user principal name then we can't use the certificate for the initial network
 			// level authentication.  We will have to assume the user is logged into an account that
 			// will allow us to obtain a NLA sequence...
-			WLog_DBG(TAG, "Smart card proccessing: using default logged in account");
+      WLog_INFO(TAG, "Smart card proccessing: using default logged in account w/UPN: %s", settings->UserPrincipalName);
 			pClientAuthID = NULL;
 		}
 		else
 		{
-			WLog_DBG(TAG, "Smart card processing: creating marshalled credential from smartcard keyname: %s", settings->IdCertificate);
+			WLog_INFO(TAG, "Smart card processing: creating marshalled credential from smartcard keyname: %s", settings->IdCertificate);
 			pClientAuthID = (PSEC_WINNT_AUTH_IDENTITY)&ClientAuthID;
 
 			// Initialize the memory
