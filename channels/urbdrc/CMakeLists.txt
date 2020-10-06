@@ -18,13 +18,15 @@
 define_channel("urbdrc")
 
 if(NOT WIN32)
-    include_directories(common)
-    add_subdirectory(common)
+include_directories(common)
+add_subdirectory(common)
 
-    if(WITH_CLIENT_CHANNELS)
-        find_package(libusb-1.0 REQUIRED)
-        include_directories(${LIBUSB_1_INCLUDE_DIRS})
+if(WITH_CLIENT_CHANNELS)
+    option(WITH_DEBUG_URBDRC "Dump data send/received in URBDRC channel" OFF)
 
-        add_channel_client(${MODULE_PREFIX} ${CHANNEL_NAME})
-    endif()
+    find_package(libusb-1.0 REQUIRED)
+    include_directories(${LIBUSB_1_INCLUDE_DIRS})
+
+    add_channel_client(${MODULE_PREFIX} ${CHANNEL_NAME})
+endif()
 endif()
