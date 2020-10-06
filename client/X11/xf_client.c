@@ -1182,6 +1182,7 @@ static BOOL xf_pre_connect(freerdp* instance)
 
 	if (!settings->Username && !settings->CredentialsFromStdin && !settings->SmartcardLogon)
 	{
+		int rc;
 		char login_name[MAX_PATH] = { 0 };
 		ULONG size = sizeof(login_name) - 1;
 

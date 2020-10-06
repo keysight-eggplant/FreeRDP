@@ -18,8 +18,8 @@
 define_channel("urbdrc")
 
 if(NOT WIN32)
-    include_directories(common)
-    add_subdirectory(common)
+include_directories(common)
+add_subdirectory(common)
 
 if(WITH_CLIENT_CHANNELS)
     option(WITH_DEBUG_URBDRC "Dump data send/received in URBDRC channel" OFF)
@@ -29,4 +29,5 @@ if(WITH_CLIENT_CHANNELS)
 
         add_channel_client(${MODULE_PREFIX} ${CHANNEL_NAME})
     endif()
+endif()
 endif()
