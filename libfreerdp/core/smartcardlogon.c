@@ -248,16 +248,16 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 				szScope[length + 1] = '\0';
 			}
 
-            // DEBUG...
-            if (WLog_IsLevelActive(WLog_Get(TAG), WLOG_DEBUG))
-            {
-                int length = wcslen(szScope);
-                char *tmpReaderName = malloc(length+1);
-                wcstombs(tmpReaderName, szScope, length);
-                tmpReaderName[length] = '\0';
-                WLog_DBG(TAG, "enumerating provider: %s @reader: %d -> %s\n", settings->CspName, length, tmpReaderName);
-                free(tmpReaderName);
-            }
+			// DEBUG...
+			if (WLog_IsLevelActive(WLog_Get(TAG), WLOG_DEBUG))
+			{
+				int length = wcslen(szScope);
+				char *tmpReaderName = malloc(length+1);
+				wcstombs(tmpReaderName, szScope, length);
+				tmpReaderName[length] = '\0';
+				WLog_DBG(TAG, "enumerating provider: %s @reader: %d -> %s\n", settings->CspName, length, tmpReaderName);
+				free(tmpReaderName);
+			}
 
 			while (ERROR_SUCCESS == NCryptEnumKeys(phProvider, szScope, &ppKeyName, &ppEnumState, 0))
 			{
@@ -309,10 +309,10 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 						if (ERROR_SUCCESS != status)
 						{
 							WLog_ERR(TAG, "NCryptGetProperty (%S) error: %ld (0x%0X)\n", NCRYPT_CERTIFICATE_PROPERTY, status, (unsigned int)status);
-                        }
+						}
 						else
 						{
-                            {
+							{
 								// Get card name...
 								{
 									LONG         status = 0;
@@ -327,7 +327,7 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 										scquery_result_free(identity);
 										identity = NULL;
 										SCardReleaseContext(scContext);
-                                        break;
+										break;
 									}
 									else
 									{
@@ -345,7 +345,7 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 											scquery_result_free(identity);
 											identity = NULL;
 											SCardReleaseContext(scContext);
-                                            break;
+											break;
 										}
 
 										BYTE  atrstring[256] = { 0 };
@@ -446,10 +446,10 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 								}
 								else
 								{
-                                    // Need to first ascertain whether this certificate is allowed for authentication/smart card logon...
-                                    {
-                                        DWORD flags = CERT_FIND_EXT_ONLY_ENHKEY_USAGE_FLAG; // CERT_FIND_EXT_ONLY_ENHKEY_USAGE_FLAG | CERT_FIND_PROP_ONLY_ENHKEY_USAGE_FLAG
-                                        DWORD dusage = 0;
+									// Need to first ascertain whether this certificate is allowed for authentication/smart card logon...
+									{
+										DWORD flags = CERT_FIND_EXT_ONLY_ENHKEY_USAGE_FLAG; // CERT_FIND_EXT_ONLY_ENHKEY_USAGE_FLAG | CERT_FIND_PROP_ONLY_ENHKEY_USAGE_FLAG
+										DWORD dusage = 0;
 										
 										// Request data buffer size needed...
                                         CertGetEnhancedKeyUsage(pcontext, flags, NULL, &dusage);
@@ -546,7 +546,7 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 											// Cleanup...
 											free(pusage);
 										}
-                                    }
+									}
 
 									// Get UPN (User Principal Name)...need the certificate for this...
 									WCHAR namestring[256] = { 0 };
@@ -597,10 +597,10 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 										}
 									}
 
-                                    // Certificate serial...
-                                    identity->certificate->token_serial = reversePropertyValue(pcontext->pCertInfo->SerialNumber.cbData, pcontext->pCertInfo->SerialNumber.pbData);
-                                    printf("cert info serial: %ld - ", pcontext->pCertInfo->SerialNumber.cbData);
-                                    dumpPropertyValue(pcontext->pCertInfo->SerialNumber.cbData, identity->certificate->token_serial);
+									// Certificate serial...
+									identity->certificate->token_serial = reversePropertyValue(pcontext->pCertInfo->SerialNumber.cbData, pcontext->pCertInfo->SerialNumber.pbData);
+									printf("cert info serial: %ld - ", pcontext->pCertInfo->SerialNumber.cbData);
+									dumpPropertyValue(pcontext->pCertInfo->SerialNumber.cbData, identity->certificate->token_serial);
 								}
 							}
 						}
