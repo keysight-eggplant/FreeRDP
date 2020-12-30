@@ -86,13 +86,21 @@ void scquery_certificate_deepfree(smartcard_certificate certificate)
   }
 }
 
+void  scquery_result_free_parts(scquery_result that)
+{
+	if (that)
+	{
+		scquery_certificate_deepfree(that->certificate);
+		free(that->X509_user_identity);
+		free(that->upn);
+	}
+}
+
 void  scquery_result_free(scquery_result that)
 {
   if (that)
   {
-    scquery_certificate_deepfree(that->certificate);
-    free(that->X509_user_identity);
-    free(that->upn);
+    scquery_result_free_parts(that);
     free(that);
   }
 }
@@ -209,9 +217,10 @@ HRESULT __cdecl LocateReader(LPWSTR *pReaderName)
 
 static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 {
-	scquery_result identity = NULL;
-	LPWSTR         readerName = NULL;
-
+	scquery_result  identityPtr = NULL;
+	LPWSTR          readerName  = NULL;
+	SECURITY_STATUS localstatus = ERROR_SUCCESS;
+	
 	// Obtain the FIRST reader name...
 	LocateReader(&readerName);
 	
@@ -238,7 +247,8 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 			NCryptKeyName     *ppKeyName = NULL;
 			PVOID              ppEnumState = NULL;
 			DWORD              idxcount = 0;
-
+			scquery_result_t   localIdentity;
+			
 			// Create the windows reader name string to scope the results...
 			{
 				int length = swprintf_s(szScope, 256, L"\\\\.\\");
@@ -272,31 +282,31 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 				if (ERROR_SUCCESS != status)
 				{
 					WLog_ERR(TAG, "NCryptOpenKey error: %ld (0x%0X)\n", status, (unsigned int)status);
-					scquery_result_free(identity);
-					identity = NULL;
+					scquery_result_free(identityPtr);
+					identityPtr = NULL;
 					break;
 				}
 				else
 				{
-					identity = malloc(sizeof(scquery_result_t));
-					memset(identity, 0, sizeof(scquery_result_t));
+					identityPtr = malloc(sizeof(scquery_result_t));
+					memset(identityPtr, 0, sizeof(scquery_result_t));
 
-					identity->certificate = malloc(sizeof(smartcard_certificate_t));
-					memset(identity->certificate, 0, sizeof(smartcard_certificate_t));
+					identityPtr->certificate = malloc(sizeof(smartcard_certificate_t));
+					memset(identityPtr->certificate, 0, sizeof(smartcard_certificate_t));
 
 					// Container name...
-					identity->certificate->id = malloc(wcslen(ppKeyName->pszName)+1);
-					memset(identity->certificate->id, 0, wcslen(ppKeyName->pszName)+1);
-					wcstombs(identity->certificate->id, ppKeyName->pszName, wcslen(ppKeyName->pszName));
+					identityPtr->certificate->id = malloc(wcslen(ppKeyName->pszName)+1);
+					memset(identityPtr->certificate->id, 0, wcslen(ppKeyName->pszName)+1);
+					wcstombs(identityPtr->certificate->id, ppKeyName->pszName, wcslen(ppKeyName->pszName));
 
 					// Slot ID...
-					identity->certificate->slot_id = idxcount;
-					identity->certificate->type = CKC_X_509;
+					identityPtr->certificate->slot_id = idxcount;
+					identityPtr->certificate->type = CKC_X_509;
 					
 					// Reader name...
-					identity->certificate->slot_description = calloc(wcslen(readerName)+1, sizeof(char));
-					memset(identity->certificate->slot_description, 0, wcslen(readerName)+1);
-					wcstombs(identity->certificate->slot_description, readerName, wcslen(readerName));
+					identityPtr->certificate->slot_description = calloc(wcslen(readerName)+1, sizeof(char));
+					memset(identityPtr->certificate->slot_description, 0, wcslen(readerName)+1);
+					wcstombs(identityPtr->certificate->slot_description, readerName, wcslen(readerName));
 									
 					{
 						DWORD   cbOutput = 256;
@@ -324,8 +334,8 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 									{
 										WLog_ERR(TAG, "SCardEstablishContext error: %ld (0x%0X)\n", status, (unsigned int)status);
 										printf("SCardEstablishContext error: %ld (0x%0X)\n", status, (unsigned int)status);
-										scquery_result_free(identity);
-										identity = NULL;
+										scquery_result_free(identityPtr);
+										identityPtr = NULL;
 										SCardReleaseContext(scContext);
 										break;
 									}
@@ -342,8 +352,8 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 										{
 											WLog_ERR(TAG, "SCardConnect error: %ld (0x%0X)\n", status, (unsigned int)status);
 											printf("SCardConnect error: %ld (0x%0X)\n", status, (unsigned int)status);
-											scquery_result_free(identity);
-											identity = NULL;
+											scquery_result_free(identityPtr);
+											identityPtr = NULL;
 											SCardReleaseContext(scContext);
 											break;
 										}
@@ -360,8 +370,8 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 										{
 											WLog_ERR(TAG, "SCardGetAttrib error: %ld (0x%0X)\n", status, (unsigned int)status);
 											printf("SCardGetAttrib error: %ld (0x%0X)\n", status, (unsigned int)status);
-											scquery_result_free(identity);
-											identity = NULL;
+											scquery_result_free(identityPtr);
+											identityPtr = NULL;
 											SCardDisconnect(scContext, SCARD_LEAVE_CARD);
 											SCardReleaseContext(scContext);
 											break;
@@ -376,8 +386,8 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 										{
 											WLog_ERR(TAG, "SCardListCards error: %ld (0x%0X)\n", status, (unsigned int)status);
 											printf("SCardListCards error: %ld (0x%0X)\n", status, (unsigned int)status);
-											scquery_result_free(identity);
-											identity = NULL;
+											scquery_result_free(identityPtr);
+											identityPtr = NULL;
 											SCardDisconnect(scContext, SCARD_LEAVE_CARD);
 											SCardReleaseContext(scContext);
 											break;
@@ -388,13 +398,13 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 											if (0 != wcsncmp(atrname, L"Identity Device", wcslen(L"Identity Device")))
 											{
 												// Allocate and azero out the memory for the card name...
-												identity->certificate->token_label = (char*)malloc(cbLength+1);
-												memset(identity->certificate->token_label, 0, cbLength+1);
+												identityPtr->certificate->token_label = (char*)malloc(cbLength+1);
+												memset(identityPtr->certificate->token_label, 0, cbLength+1);
 												
 												// Convert to char string...
-												wcstombs(identity->certificate->token_label, atrname, cbLength);
-												WLog_DBG(TAG, "Card name: %ld -> %s\n", cbLength, identity->certificate->token_label);
-												printf("Card name: %ld -> %s\n", cbLength, identity->certificate->token_label);
+												wcstombs(identityPtr->certificate->token_label, atrname, cbLength);
+												WLog_DBG(TAG, "Card name: %ld -> %s\n", cbLength, identityPtr->certificate->token_label);
+												printf("Card name: %ld -> %s\n", cbLength, identityPtr->certificate->token_label);
 											}
 											else
 											{
@@ -404,8 +414,8 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 												{
 													WLog_ERR(TAG, "card name error: %ld (0x%0X)\n", GetLastError(), (unsigned int)GetLastError());
 													printf("card name error: %ld (0x%0X)\n", GetLastError(), (unsigned int)GetLastError());
-													scquery_result_free(identity);
-													identity = NULL;
+													scquery_result_free(identityPtr);
+													identityPtr = NULL;
 													SCardDisconnect(scContext, SCARD_LEAVE_CARD);
 													SCardReleaseContext(scContext);
                                                     break;
@@ -415,16 +425,16 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 													const int size = pos2 - pos1;
 													
 													// Allocate and azero out the memory for the card name...
-													identity->certificate->token_label = (char*)calloc(size + 1, sizeof(char));
-													memset(identity->certificate->token_label, 0, (size + 1) * sizeof(char));
+													identityPtr->certificate->token_label = (char*)calloc(size + 1, sizeof(char));
+													memset(identityPtr->certificate->token_label, 0, (size + 1) * sizeof(char));
 													
 													// Null terminate at ')' position...
 													*pos2 = '\0';
 													
 													// Convert to char string...
-													wcstombs(identity->certificate->token_label, pos1 + 1, size-1);
-													WLog_DBG(TAG, "Card name: %d -> %s\n", size, identity->certificate->token_label);
-													printf("Card name: %d -> %s\n", size, identity->certificate->token_label);
+													wcstombs(identityPtr->certificate->token_label, pos1 + 1, size-1);
+													WLog_DBG(TAG, "Card name: %d -> %s\n", size, identityPtr->certificate->token_label);
+													printf("Card name: %d -> %s\n", size, identityPtr->certificate->token_label);
 												}
 											}
 										}
@@ -440,8 +450,8 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 								{
 									WLog_ERR(TAG, "CertCreateCertificateContext error: %ld (0x%0X)\n", GetLastError(), (unsigned int)GetLastError());
 									printf("CertCreateCertificateContext error: %ld (0x%0X)\n", GetLastError(), (unsigned int)GetLastError());
-									scquery_result_free(identity);
-									identity = NULL;
+									scquery_result_free(identityPtr);
+									identityPtr = NULL;
 									break;
 								}
 								else
@@ -452,7 +462,7 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 										DWORD dusage = 0;
 										
 										// Request data buffer size needed...
-                                        CertGetEnhancedKeyUsage(pcontext, flags, NULL, &dusage);
+										CertGetEnhancedKeyUsage(pcontext, flags, NULL, &dusage);
 										WLog_INFO(TAG, "Certificate enhanced key usage - allocating size: %d\n", dusage);
 
 										if (0 == dusage)
@@ -468,8 +478,8 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 											if (NULL == pusage)
 											{
 												WLog_ERR(TAG, "CertGetEnhancedKeyUsage error allocating memory enhanced key usage data: %d (0x%0X)\n", GetLastError(), GetLastError());
-												scquery_result_free(identity);
-												identity = NULL;
+												scquery_result_free(identityPtr);
+												identityPtr = NULL;
 												break;
 											}
 											else
@@ -480,16 +490,16 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 												if ((FALSE == status) && (CRYPT_E_NOT_FOUND != errorcode))
 												{
 													WLog_ERR(TAG, "CertGetEnhancedKeyUsage error getting enhanced key usage data: %d (0x%0X)\n", GetLastError(), GetLastError());
-													scquery_result_free(identity);
-													identity = NULL;
+													scquery_result_free(identityPtr);
+													identityPtr = NULL;
 													free(pusage);
 													break;
 												}
 												else if ((0 == pusage->cUsageIdentifier) && (CRYPT_E_NOT_FOUND != errorcode))
 												{
 													WLog_ERR(TAG, "CertGetEnhancedKeyUsage(pusage->cUsageIdentifier == 0) error: %d (0x%0X)\n", GetLastError(), GetLastError());
-													scquery_result_free(identity);
-													identity = NULL;
+													scquery_result_free(identityPtr);
+													identityPtr = NULL;
 													free(pusage);
 													break;
 												}
@@ -535,8 +545,8 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 													if (2 != foundCount)
 													{
 														WLog_ERR(TAG, "CertGetEnhancedKeyUsage(Authentication/Smart Card Logon certificate not found)\n");
-														scquery_result_free(identity);
-														identity = NULL;
+														scquery_result_free(identityPtr);
+														identityPtr = NULL;
 														free(pusage);
 														break;
 													}
@@ -554,27 +564,27 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 									if (false == CertGetNameString(pcontext, CERT_NAME_UPN_TYPE, 0, NULL, namestring, 256))
 									{
 										WLog_ERR(TAG, "NCryptOpenKey error getting upn: %d (0x%0X)\n", GetLastError(), GetLastError());
-#if 0
-										scquery_result_free(identity);
-										identity = NULL;
+#if 0								// Not considering absent or invalid UPN as an error...
+										scquery_result_free(identityPtr);
+										identityPtr = NULL;
 										break;
 #endif
 									}
 									else if (0 == wcslen(namestring))
 									{
 										WLog_ERR(TAG, "NCryptOpenKey upn unavailable");
-#if 0
-										scquery_result_free(identity);
-										identity = NULL;
+#if 0								// Not considering absent or invalid UPN as an error...
+										scquery_result_free(identityPtr);
+										identityPtr = NULL;
 										break;
 #endif
 									}
 									else
 									{
-										identity->upn = malloc(wcslen(namestring)+1);
-										memset(identity->upn, 0, wcslen(namestring)+1);
-										wcstombs(identity->upn, namestring, wcslen(namestring));
-										printf("UPN: %s\n", identity->upn);
+										identityPtr->upn = malloc(wcslen(namestring)+1);
+										memset(identityPtr->upn, 0, wcslen(namestring)+1);
+										wcstombs(identityPtr->upn, namestring, wcslen(namestring));
+										printf("UPN: %s\n", identityPtr->upn);
 									}
 
 									// X500 name string (X509 compatible???)...
@@ -584,23 +594,23 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 										if (0 == converted)
 										{
 											WLog_ERR(TAG, "X500 name error (CERT_X500_NAME_STR): %d (0x%0X)\n", GetLastError(), GetLastError());
-											scquery_result_free(identity);
-											identity = NULL;
+											scquery_result_free(identityPtr);
+											identityPtr = NULL;
 											break;
 										}
 										else
 										{
 											printf("X500 name: %ld string: %S\n", converted, namestring);
-											identity->X509_user_identity = calloc(wcslen(namestring)+1, sizeof(char));
-											memset(identity->X509_user_identity, 0, wcslen(namestring)+1);
-											wcstombs(identity->X509_user_identity, namestring, wcslen(namestring));
+											identityPtr->X509_user_identity = calloc(wcslen(namestring)+1, sizeof(char));
+											memset(identityPtr->X509_user_identity, 0, wcslen(namestring)+1);
+											wcstombs(identityPtr->X509_user_identity, namestring, wcslen(namestring));
 										}
 									}
 
 									// Certificate serial...
-									identity->certificate->token_serial = reversePropertyValue(pcontext->pCertInfo->SerialNumber.cbData, pcontext->pCertInfo->SerialNumber.pbData);
+									identityPtr->certificate->token_serial = reversePropertyValue(pcontext->pCertInfo->SerialNumber.cbData, pcontext->pCertInfo->SerialNumber.pbData);
 									printf("cert info serial: %ld - ", pcontext->pCertInfo->SerialNumber.cbData);
-									dumpPropertyValue(pcontext->pCertInfo->SerialNumber.cbData, identity->certificate->token_serial);
+									dumpPropertyValue(pcontext->pCertInfo->SerialNumber.cbData, identityPtr->certificate->token_serial);
 								}
 							}
 						}
@@ -620,7 +630,7 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 				++idxcount;
 					
 				// Done..
-				if (NULL != identity)
+				if (NULL != (identityPtr))
 					break;
 			}
 			
@@ -633,13 +643,13 @@ static scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 		free(cspname);
 	}
 
-	return identity;
+	return identityPtr;
 }
 #endif
 
 int get_info_smartcard(rdpSettings* settings)
 {
-	scquery_result identity = NULL;
+	scquery_result identityPtr = NULL;
 
 #if defined(WITH_PKCS11H) && defined(WITH_GSSAPI)
     if (settings->Pkcs11Module == NULL)
@@ -648,23 +658,23 @@ int get_info_smartcard(rdpSettings* settings)
         return -1;
     }
     
-    settings->Krb5Trace = true;
-	identity = scquery_X509_user_identities(settings->Pkcs11Module,
+	settings->Krb5Trace = true;
+	identityPtr = scquery_X509_user_identities(settings->Pkcs11Module,
 		settings->ReaderName,
 		settings->CardName,
 		settings->Krb5Trace);
 #elif defined(WITH_SMARTCARD_LOGON) && defined(_WIN32)
-    // Default the Cryptographic Service Provider if none specified...
-    if (NULL == settings->CspName)
-    {
-        settings->CspName = strdup(MS_SCARD_PROV_A);
-    }
+	// Default the Cryptographic Service Provider if none specified...
+	if (NULL == settings->CspName)
+	{
+		settings->CspName = strdup(MS_SCARD_PROV_A);
+	}
 
-    // Attempt to read an identity from the smart card...
-    identity = getUserIdentityFromSmartcard(settings);
+	// Attempt to read an (identityPtr) from the smart card...
+	identityPtr = getUserIdentityFromSmartcard(settings);
 #endif
 
-	if (identity == NULL)
+	if (identityPtr == NULL)
 	{
 		WLog_ERR(TAG, "Could not get an identity from the smartcard %s (reader %s)",
 			ORNIL(settings->CardName),
@@ -672,21 +682,24 @@ int get_info_smartcard(rdpSettings* settings)
 		return -1;
 	}
 
-	copy_string(&settings->CardName,          identity->certificate->token_label);
-	copy_string(&settings->ReaderName,        identity->certificate->slot_description);
-	copy_string(&settings->UserPrincipalName, identity->upn);
-	copy_string(&settings->PkinitIdentity, 	  identity->X509_user_identity);
-	copy_string(&settings->TokenLabel,    	  identity->certificate->token_label);
-	copy_string(&settings->IdCertificate, 	  identity->certificate->id);
+	copy_string(&settings->CardName,          identityPtr->certificate->token_label);
+	copy_string(&settings->ReaderName,        identityPtr->certificate->slot_description);
+	copy_string(&settings->UserPrincipalName, identityPtr->upn);
+	copy_string(&settings->PkinitIdentity, 	  identityPtr->X509_user_identity);
+	copy_string(&settings->TokenLabel,    	  identityPtr->certificate->token_label);
+	copy_string(&settings->IdCertificate, 	  identityPtr->certificate->id);
 	settings->IdCertificateLength = strlen(settings->IdCertificate);
-	settings->SlotID = identity->certificate->slot_id;
-	settings->PinPadIsPresent = identity->certificate->protected_authentication_path;
+	settings->SlotID = identityPtr->certificate->slot_id;
+	settings->PinPadIsPresent = identityPtr->certificate->protected_authentication_path;
 
 	WLog_INFO(TAG, "Got identity from the smartcard %s (reader %s): %s (UPN = %s) Length: %d Slot: %ld CertID: %s",
 		ORNIL(settings->CardName),
 		ORNIL(settings->ReaderName),
-		identity->X509_user_identity,
-		identity->upn, settings->IdCertificateLength, settings->SlotID, settings->IdCertificate);
-	scquery_result_free(identity);
+		identityPtr->X509_user_identity,
+		identityPtr->upn, settings->IdCertificateLength, settings->SlotID, settings->IdCertificate);
+	
+	// Cleanup identity memory allocated...
+	scquery_result_free(identityPtr);
+	
 	return 0;
 }
