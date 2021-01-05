@@ -6,6 +6,8 @@
 //#include "certificate.h"
 #include <pkcs11-helper-1.0/pkcs11.h>
 
+typedef void* buffer;
+
 typedef struct
 {
   CK_SLOT_ID          slot_id;
