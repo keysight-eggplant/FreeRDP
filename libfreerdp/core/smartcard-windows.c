@@ -18,6 +18,7 @@
 */
 
 #include <stdio.h>
+#include "smartcardlogon.h"
 #include "smartcard-windows.h"
 #include <freerdp/log.h>
 #include <winpr/crypto.h>
@@ -241,5 +242,118 @@ LPWSTR getMarshaledCredentials(char *keyname)
   
   return credentials;
 }
+
+int getAtrCardName(char *readerName, scquery_result identityPtr)
+{
+  LONG         status = 0;
+  SCARDCONTEXT scContext = 0;
+  
+  status = SCardEstablishContext(SCARD_SCOPE_USER, NULL, NULL, &scContext);
+  
+  if (0 == scContext)
+  {
+    WLog_ERR(TAG, "SCardEstablishContext error: %ld (0x%0X)\n", status, (unsigned int)status);
+    printf("SCardEstablishContext error: %ld (0x%0X)\n", status, (unsigned int)status);
+    SCardReleaseContext(scContext);
+    return -1;
+  }
+  else
+  {
+    DWORD           dwShareMode = SCARD_SHARE_SHARED;
+    DWORD           dwPreferredProtocols = SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1;
+    SCARDHANDLE     hCardHandle;
+    DWORD           dwActiveProtocol = 0;
+    status = SCardConnect(scContext, readerName, dwShareMode, dwPreferredProtocols, &hCardHandle, &dwActiveProtocol);
+    
+    // Translate the ATR to a card name...
+    if (ERROR_SUCCESS != status)
+    {
+      WLog_ERR(TAG, "SCardConnect error: %ld (0x%0X)\n", status, (unsigned int)status);
+      printf("SCardConnect error: %ld (0x%0X)\n", status, (unsigned int)status);
+      SCardReleaseContext(scContext);
+      return -1;
+    }
+    
+    BYTE  atrstring[256] = { 0 };
+    DWORD cbLength = 256;
+    
+    // ATR...
+    cbLength = 256;
+    status = SCardGetAttrib(hCardHandle, SCARD_ATTR_ATR_STRING, atrstring, &cbLength);
+    
+    // Check whether we got a ATR string...
+    if (ERROR_SUCCESS != status)
+    {
+      WLog_ERR(TAG, "SCardGetAttrib error: %ld (0x%0X)\n", status, (unsigned int)status);
+      printf("SCardGetAttrib error: %ld (0x%0X)\n", status, (unsigned int)status);
+      SCardDisconnect(scContext, SCARD_LEAVE_CARD);
+      SCardReleaseContext(scContext);
+      return -1;
+    }
+    
+    wchar_t atrname[256] = { 0 };
+    cbLength = 256;
+    
+    // This gets the card name for the ATR string...
+    status = SCardListCards(scContext, atrstring, NULL, 0, atrname, &cbLength);
+    if (ERROR_SUCCESS != status)
+    {
+      WLog_ERR(TAG, "SCardListCards error: %ld (0x%0X)\n", status, (unsigned int)status);
+      printf("SCardListCards error: %ld (0x%0X)\n", status, (unsigned int)status);
+      SCardDisconnect(scContext, SCARD_LEAVE_CARD);
+      SCardReleaseContext(scContext);
+    }
+    else
+    {
+      printf("ATR name: %ld -> %S\n", cbLength, atrname);
+      if (0 != wcsncmp(atrname, L"Identity Device", wcslen(L"Identity Device")))
+      {
+        // Allocate and azero out the memory for the card name...
+        identityPtr->certificate->token_label = (char*)malloc(cbLength+1);
+        memset(identityPtr->certificate->token_label, 0, cbLength+1);
+        
+        // Convert to char string...
+        wcstombs(identityPtr->certificate->token_label, atrname, cbLength);
+        WLog_DBG(TAG, "Card name: %ld -> %s\n", cbLength, identityPtr->certificate->token_label);
+        printf("Card name: %ld -> %s\n", cbLength, identityPtr->certificate->token_label);
+      }
+      else
+      {
+        wchar_t* pos1 = wcschr(atrname, '(');
+        wchar_t* pos2 = wcschr(atrname, ')');
+        if ((NULL == pos1) || (NULL == pos2))
+        {
+          WLog_ERR(TAG, "card name error: %ld (0x%0X)\n", GetLastError(), (unsigned int)GetLastError());
+          printf("card name error: %ld (0x%0X)\n", GetLastError(), (unsigned int)GetLastError());
+          SCardDisconnect(scContext, SCARD_LEAVE_CARD);
+          SCardReleaseContext(scContext);
+        }
+        else
+        {
+          const int size = pos2 - pos1;
+          
+          // Allocate and azero out the memory for the card name...
+          identityPtr->certificate->token_label = (char*)calloc(size + 1, sizeof(char));
+          memset(identityPtr->certificate->token_label, 0, (size + 1) * sizeof(char));
+          
+          // Null terminate at ')' position...
+          *pos2 = '\0';
+          
+          // Convert to char string...
+          wcstombs(identityPtr->certificate->token_label, pos1 + 1, size-1);
+          WLog_DBG(TAG, "Card name: %d -> %s\n", size, identityPtr->certificate->token_label);
+          printf("Card name: %d -> %s\n", size, identityPtr->certificate->token_label);
+        }
+      }
+    }
+    
+    // Cleanup...
+    SCardDisconnect(scContext, SCARD_LEAVE_CARD);
+    SCardReleaseContext(scContext);
+  }
+  
+  return 0;
+}
+
 #endif
 
