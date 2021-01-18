@@ -1,3 +1,4 @@
+#include "smartcardlogon.h"
 #include <freerdp/log.h>
 #include <freerdp/settings.h>
 #include <wincrypt.h>

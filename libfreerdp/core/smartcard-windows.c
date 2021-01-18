@@ -22,6 +22,7 @@
 #include "smartcard-windows.h"
 #include <freerdp/log.h>
 #include <winpr/crypto.h>
+#include <WinScard.h>
 
 
 #if defined(WITH_SMARTCARD_LOGON) && defined(_WIN32)
