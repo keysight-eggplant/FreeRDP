@@ -21,9 +21,15 @@
 #define smartcard_windows_h
 
 #include "smartcardlogon.h"
+#include <wincrypt.h>
+#include <WinCred.h>
+#include <WinScard.h>
+#include <winpr/crypto.h>
 
 // Prototypes...
+int getAtrCardName(char *readerName, scquery_result identityPtr);
 int getCryptoCredentialForKeyName(LPWSTR keyname, LPWSTR *credential);
 LPWSTR getMarshaledCredentials(char *keyname);
+int validateSmartCardUsage(PCCERT_CONTEXT pcontext, scquery_result identityPtr);
 
 #endif /* smartcard_windows_h */

@@ -18,11 +18,9 @@
 */
 
 #include <stdio.h>
-#include "smartcardlogon.h"
 #include "smartcard-windows.h"
+#include "smartcardlogon.h"
 #include <freerdp/log.h>
-#include <winpr/crypto.h>
-#include <WinScard.h>
 
 
 #if defined(WITH_SMARTCARD_LOGON) && defined(_WIN32)
@@ -356,5 +354,101 @@ int getAtrCardName(char *readerName, scquery_result identityPtr)
   return 0;
 }
 
+int validateSmartCardUsage(PCCERT_CONTEXT pcontext, scquery_result identityPtr)
+{
+  DWORD flags = CERT_FIND_EXT_ONLY_ENHKEY_USAGE_FLAG; // CERT_FIND_EXT_ONLY_ENHKEY_USAGE_FLAG | CERT_FIND_PROP_ONLY_ENHKEY_USAGE_FLAG
+  DWORD dusage = 0;
+  
+  // Request data buffer size needed...
+  CertGetEnhancedKeyUsage(pcontext, flags, NULL, &dusage);
+  WLog_INFO(TAG, "Certificate enhanced key usage - allocating size: %d\n", dusage);
+  
+  if (0 == dusage)
+  {
+    WLog_INFO(TAG, "CertGetEnhancedKeyUsage enhanced key usage size zero - assuming ALL ACCESS");
+  }
+  else
+  {
+    // TODO: Need more error checking here!!!
+    PCERT_ENHKEY_USAGE pusage = (PCERT_ENHKEY_USAGE)malloc(dusage);
+    
+    // ANY erroros will skip this certificate...
+    if (NULL == pusage)
+    {
+      WLog_ERR(TAG, "CertGetEnhancedKeyUsage error allocating memory enhanced key usage data: %d (0x%0X)\n", GetLastError(), GetLastError());
+      identityPtr = NULL;
+    }
+    else
+    {
+      BOOL status = CertGetEnhancedKeyUsage(pcontext, flags, pusage, &dusage);
+      DWORD errorcode = GetLastError();
+      
+      if ((FALSE == status) && (CRYPT_E_NOT_FOUND != errorcode))
+      {
+        WLog_ERR(TAG, "CertGetEnhancedKeyUsage error getting enhanced key usage data: %d (0x%0X)\n", GetLastError(), GetLastError());
+        identityPtr = NULL;
+        free(pusage);
+      }
+      else if ((0 == pusage->cUsageIdentifier) && (CRYPT_E_NOT_FOUND != errorcode))
+      {
+        WLog_ERR(TAG, "CertGetEnhancedKeyUsage(pusage->cUsageIdentifier == 0) error: %d (0x%0X)\n", GetLastError(), GetLastError());
+        identityPtr = NULL;
+        free(pusage);
+      }
+      else if (0 == pusage->cUsageIdentifier) // AND (CRYPT_E_NOT_FOUND != errorcode) is aassumed from above...
+      {
+        WLog_INFO(TAG, "Certificate enhanced key usage: ALL ALLOWED\n");
+      }
+      else
+      {
+        LPSTR *string = pusage->rgpszUsageIdentifier;
+        int    foundCount = 0; // Need this to be 2 - SMART_CARD_LOGON_OID && CLIENT_AUTHENTICATION_OID - otherwise fail...
+        for (int index = 0; index < pusage->cUsageIdentifier; ++index)
+        {
+          static const char *SMART_CARD_LOGON_OID        = "1.3.6.1.4.1.311.20.2.2";
+#define SMART_CARD_LOGON_OID_LENGTH strlen(SMART_CARD_LOGON_OID)
+          static const char *CLIENT_AUTHENTICATION_OID   = "1.3.6.1.5.5.7.3.2";
+#define CLIENT_AUTHENTICATION_OID_LENGTH strlen(CLIENT_AUTHENTICATION_OID)
+          static const char *SECURE_EMAIL_OID            = "1.3.6.1.5.5.7.3.4";
+#define SECURE_EMAIL_OID_LENGTH strlen(SECURE_EMAIL_OID)
+          
+          int length = strlen(string[index]);
+          
+          if ((SMART_CARD_LOGON_OID_LENGTH == length) && (0 == strncmp(SMART_CARD_LOGON_OID, string[index], SMART_CARD_LOGON_OID_LENGTH)))
+          {
+            WLog_INFO(TAG, "SMART_CARD_LOGON_OID enhanced key usage: %d -> %s\n", length, string[index]);
+            foundCount++;
+          }
+          else if ((CLIENT_AUTHENTICATION_OID_LENGTH == length) && (0 == strncmp(CLIENT_AUTHENTICATION_OID, string[index], CLIENT_AUTHENTICATION_OID_LENGTH)))
+          {
+            WLog_INFO(TAG, "CLIENT_AUTHENTICATION_OID enhanced key usage: %d -> %s\n", length, string[index]);
+            foundCount++;
+          }
+          else if ((SECURE_EMAIL_OID_LENGTH == length) && (0 == strncmp(SECURE_EMAIL_OID, string[index], SECURE_EMAIL_OID_LENGTH)))
+          {
+            WLog_INFO(TAG, "SECURE_EMAIL_OID enhanced key usage: %d -> %s\n", length, string[index]);
+          }
+          else
+          {
+            WLog_ERR(TAG, "UNKNOWN enhanced key usage: %d -> %s\n", length, string[index]);
+          }
+        }
+        
+        // We need at least the client authentication and smart card logon OID for the ceritificate...
+        if (2 != foundCount)
+        {
+          WLog_ERR(TAG, "CertGetEnhancedKeyUsage(Authentication/Smart Card Logon certificate not found)\n");
+          identityPtr = NULL;
+          free(pusage);
+        }
+      }
+    }
+    
+    // Cleanup...
+    free(pusage);
+  }
+  
+  return ((NULL == identityPtr) ? -1 : 0);
+}
 #endif
 
