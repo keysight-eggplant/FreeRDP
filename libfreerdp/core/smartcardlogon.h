@@ -32,5 +32,7 @@ typedef struct
 } scquery_result_t, *scquery_result;
 
 int get_info_smartcard(rdpSettings* settings);
+void  scquery_result_free_parts(scquery_result that);
+void  scquery_result_free(scquery_result that);
 
 #endif

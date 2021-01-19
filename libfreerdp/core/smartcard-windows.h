@@ -27,9 +27,9 @@
 #include <winpr/crypto.h>
 
 // Prototypes...
-int getAtrCardName(char *readerName, scquery_result identityPtr);
+scquery_result getUserIdentityFromSmartcard(rdpSettings *settings);
+
 int getCryptoCredentialForKeyName(LPWSTR keyname, LPWSTR *credential);
 LPWSTR getMarshaledCredentials(char *keyname);
-int validateSmartCardUsage(PCCERT_CONTEXT pcontext, scquery_result identityPtr);
 
 #endif /* smartcard_windows_h */
