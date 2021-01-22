@@ -25,6 +25,14 @@
 
 #if defined(WITH_SMARTCARD_LOGON) && defined(_WIN32)
 
+static const char *SMART_CARD_LOGON_OID        = "1.3.6.1.4.1.311.20.2.2";
+#define SMART_CARD_LOGON_OID_LENGTH           strlen(SMART_CARD_LOGON_OID)
+static const char *CLIENT_AUTHENTICATION_OID   = "1.3.6.1.5.5.7.3.2";
+#define CLIENT_AUTHENTICATION_OID_LENGTH      strlen(CLIENT_AUTHENTICATION_OID)
+static const char *SECURE_EMAIL_OID            = "1.3.6.1.5.5.7.3.4";
+#define SECURE_EMAIL_OID_LENGTH               strlen(SECURE_EMAIL_OID)
+
+
 extern LPTSTR stringX_from_cstring(const char* cstring);
 
 #define TAG FREERDP_TAG("core.nla.smartcard")
@@ -51,8 +59,8 @@ void dumpPropertyValue(int cbData, void *pvData)
 #endif
 }
 
-// Static functions...
-static int validateSmartCardUser(PCCERT_CONTEXT pcontext, scquery_result identityPtr)
+// MARK: Static functions...
+static int getCertificateUPN(PCCERT_CONTEXT pcontext, scquery_result identityPtr)
 {
   WCHAR namestring[256] = { 0 };
   
@@ -75,6 +83,38 @@ static int validateSmartCardUser(PCCERT_CONTEXT pcontext, scquery_result identit
   }
   
   return ((NULL == identityPtr) ? -1 : 0);
+}
+
+static int validateSmartCardUsername(scquery_result identityPtr, rdpSettings *settings)
+{
+  if ((NULL != settings->Username) && (0 != strlen(settings->Username)))
+  {
+    char *upn      = _strdup(identityPtr->upn);
+    char *username = _strdup(settings->Username);
+    
+    // Convert to lower case...
+    _strlwr(upn);
+    _strlwr(username);
+    
+    // Check username for at least a partial patch...
+    char *resultptr = strstr(upn, username);
+    
+    // Free memory before continuing...
+    free(upn);
+    free(username);
+    
+    if (NULL == resultptr)
+    {
+      WLog_ERR(TAG, "username mismatch: %s vs. %s\n", settings->Username, identityPtr->upn);
+      // No occurrance of requested partial username....
+      return -1;
+    }
+    
+    // We can use this certificate...
+    WLog_INFO(TAG, "username match: %s vs. %s\n", settings->Username, identityPtr->upn);
+  }
+  
+  return 0;
 }
 
 static int validateSmartCardUsage(PCCERT_CONTEXT pcontext, scquery_result identityPtr)
@@ -128,13 +168,6 @@ static int validateSmartCardUsage(PCCERT_CONTEXT pcontext, scquery_result identi
         int    foundCount = 0; // Need this to be 2 - SMART_CARD_LOGON_OID && CLIENT_AUTHENTICATION_OID - otherwise fail...
         for (int index = 0; index < pusage->cUsageIdentifier; ++index)
         {
-          static const char *SMART_CARD_LOGON_OID        = "1.3.6.1.4.1.311.20.2.2";
-#define SMART_CARD_LOGON_OID_LENGTH strlen(SMART_CARD_LOGON_OID)
-          static const char *CLIENT_AUTHENTICATION_OID   = "1.3.6.1.5.5.7.3.2";
-#define CLIENT_AUTHENTICATION_OID_LENGTH strlen(CLIENT_AUTHENTICATION_OID)
-          static const char *SECURE_EMAIL_OID            = "1.3.6.1.5.5.7.3.4";
-#define SECURE_EMAIL_OID_LENGTH strlen(SECURE_EMAIL_OID)
-          
           int length = strlen(string[index]);
           
           if ((SMART_CARD_LOGON_OID_LENGTH == length) && (0 == strncmp(SMART_CARD_LOGON_OID, string[index], SMART_CARD_LOGON_OID_LENGTH)))
@@ -237,6 +270,10 @@ static int getAtrCardName(LPWSTR readerName, scquery_result identityPtr)
     else
     {
       printf("ATR name: %ld -> %S\n", cbLength, atrname);
+      
+      // Some readers/cards seem to have the following embedded text: '(Identity Device)':
+      // This creates a problem when passing the reader name via the RDP protocol so
+      // the remote system knows which reader to use...
       if (0 != wcsncmp(atrname, L"Identity Device", wcslen(L"Identity Device")))
       {
         // Allocate and azero out the memory for the card name...
@@ -250,6 +287,7 @@ static int getAtrCardName(LPWSTR readerName, scquery_result identityPtr)
       }
       else
       {
+        // Need to remove the embedded text: '(Identity Device)':
         wchar_t* pos1 = wcschr(atrname, '(');
         wchar_t* pos2 = wcschr(atrname, ')');
         if ((NULL == pos1) || (NULL == pos2))
@@ -263,7 +301,7 @@ static int getAtrCardName(LPWSTR readerName, scquery_result identityPtr)
         {
           const int size = pos2 - pos1;
           
-          // Allocate and azero out the memory for the card name...
+          // Allocate and zero out the memory for the card name...
           identityPtr->certificate->token_label = (char*)calloc(size + 1, sizeof(char));
           memset(identityPtr->certificate->token_label, 0, (size + 1) * sizeof(char));
           
@@ -285,83 +323,8 @@ static int getAtrCardName(LPWSTR readerName, scquery_result identityPtr)
   
   return 0;
 }
-// Global function definitions...
-HRESULT __cdecl LocateReader(LPWSTR *pReaderName)
-{
-  HRESULT           hr = S_OK;
-  LPTSTR            szReaders = NULL;
-  LPTSTR            szRdr = NULL;
-  DWORD             cchReaders = SCARD_AUTOALLOCATE;
-  DWORD             dwI, dwRdrCount;
-  SCARD_READERSTATE rgscState[MAXIMUM_SMARTCARD_READERS] = { 0 };
-  SCARDCONTEXT      hSC = 0;
-  LONG              lReturn;
-  
-  // We need a pointer...
-  if (NULL == pReaderName)
-  {
-    WLog_ERR(TAG, "LocateReader: reader name return pointer is NULL\n");
-    return(1);
-  }
-  *pReaderName = NULL;
-  
-  // Establish the card to watch for.
-  // Multiple cards can be looked for, but
-  // We look for only the first card reader.
-  
-  // Establish a context.
-  lReturn = SCardEstablishContext(SCARD_SCOPE_USER, NULL, NULL, &hSC);
-  if (SCARD_S_SUCCESS != lReturn)
-  {
-    WLog_ERR(TAG, "LocateReader: Failed SCardEstablishContext\n");
-    return(1);
-  }
-  
-  // Determine which readers are available.
-  lReturn = SCardListReaders(hSC, NULL, (LPTSTR)&szReaders, &cchReaders);
-  if (SCARD_S_SUCCESS != lReturn)
-  {
-    WLog_ERR(TAG, "LocateReader: Failed SCardListReaders\n");
-    return(1);
-  }
-  
-  // Place the readers into the state array.
-  szRdr = szReaders;
-  for (dwI = 0; dwI < MAXIMUM_SMARTCARD_READERS; dwI++)
-  {
-    if (0 == *szRdr)
-      break;
-    rgscState[dwI].szReader = szRdr;
-    rgscState[dwI].dwCurrentState = SCARD_STATE_UNAWARE;
-    szRdr += lstrlen(szRdr) + 1;
-  }
-  dwRdrCount = dwI;
-  
-  // If any readers are available, proceed.
-  if (0 != dwRdrCount)
-  {
-    *pReaderName = _wcsdup(rgscState[0].szReader);
-  }
-  else
-  {
-    WLog_ERR(TAG, "LocateReader: No readers available\n");
-  }
-  
-  // Cleanup reader memory...
-  SCardFreeMemory(hSC, szReaders);
-  
-  // Release the context.
-  lReturn = SCardReleaseContext(hSC);
-  if (SCARD_S_SUCCESS != lReturn)
-  {
-    printf("Failed SCardReleaseContext\n");
-    WLog_ERR(TAG, "LocateReader: Failed SCardReleaseContext\n");
-  }
-  
-  return hr;
-}
 
-int getCryptoCredentialForKeyName(LPWSTR keyname, LPWSTR *credential)
+static int getCryptoCredentialForKeyName(LPWSTR keyname, LPWSTR *credential)
 {
   NCRYPT_PROV_HANDLE phProvider;
   DWORD              certsize = 0;
@@ -442,6 +405,86 @@ int getCryptoCredentialForKeyName(LPWSTR keyname, LPWSTR *credential)
   return certsize;
 }
 
+static DWORD getSmartCardReaders(LPWSTR *pReaderNames[])
+{
+  HRESULT           hr = S_OK;
+  LPTSTR            szReaders = NULL;
+  LPTSTR            szRdr = NULL;
+  DWORD             cchReaders = SCARD_AUTOALLOCATE;
+  DWORD             dwI = 0;
+  DWORD             dwRdrCount = 0;
+  SCARD_READERSTATE rgscState[MAXIMUM_SMARTCARD_READERS] = { 0 };
+  SCARDCONTEXT      hSC = 0;
+  LONG              lReturn;
+  
+  // Return a list of cmart cards reader(s) available...
+  // We need a pointer passed in for the return array...
+  if (NULL == pReaderNames)
+  {
+    WLog_ERR(TAG, "getSmartCardReaders: NULL input pointer\n");
+  }
+  else
+  {
+    // Establish a context.
+    lReturn = SCardEstablishContext(SCARD_SCOPE_USER, NULL, NULL, &hSC);
+    if (SCARD_S_SUCCESS != lReturn)
+    {
+      WLog_ERR(TAG, "getSmartCardReaders: Failed SCardEstablishContext\n");
+    }
+    else
+    {
+      // Determine which readers are available.
+      lReturn = SCardListReaders(hSC, NULL, (LPTSTR)&szReaders, &cchReaders);
+      if (SCARD_S_SUCCESS != lReturn)
+      {
+        WLog_ERR(TAG, "getSmartCardReaders: Failed SCardListReaders\n");
+      }
+      else
+      {
+        // Place the readers into the state array...
+        // This is straight code from micrsoft - pretty crappy layout...
+        // It seems the result is a contiguous array of characters that
+        // include multiple reader names.  We have to break them up this way...
+        szRdr = szReaders;
+        for (dwI = 0; dwI < MAXIMUM_SMARTCARD_READERS; dwI++)
+        {
+          if (0 == *szRdr)
+            break;
+          rgscState[dwI].szReader = szRdr;
+          rgscState[dwI].dwCurrentState = SCARD_STATE_UNAWARE;
+          szRdr += lstrlen(szRdr) + 1;
+        }
+        dwRdrCount = dwI;
+        
+        // If any readers are available, proceed.
+        if (0 != dwRdrCount)
+        {
+          *pReaderNames = malloc(sizeof(LPWSTR) * dwRdrCount);
+          for (dwI = 0; dwI < dwRdrCount; ++dwI)
+            (*pReaderNames)[dwI] = _wcsdup(rgscState[dwI].szReader);
+        }
+        else
+        {
+          WLog_ERR(TAG, "getSmartCardReaders: No readers available\n");
+        }
+        
+        // Cleanup reader memory...
+        SCardFreeMemory(hSC, szReaders);
+        
+        // Release the context.
+        lReturn = SCardReleaseContext(hSC);
+        if (SCARD_S_SUCCESS != lReturn)
+        {
+          WLog_ERR(TAG, "getSmartCardReaders: Failed SCardReleaseContext\n");
+        }
+      }
+    }
+  }
+  
+  return dwRdrCount;
+}
+
+// MARK: Global function definitions...
 LPWSTR getMarshaledCredentials(char *keyname)
 {
   CERT_CREDENTIAL_INFO certInfo = { sizeof(CERT_CREDENTIAL_INFO), { 0 } };
@@ -555,13 +598,14 @@ LPWSTR getMarshaledCredentials(char *keyname)
 scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 {
   scquery_result  identityPtr = NULL;
-  LPWSTR          readerName  = NULL;
+  LPWSTR         *pReaderNames = NULL;
+  DWORD           readerCount = 0;
   SECURITY_STATUS localstatus = ERROR_SUCCESS;
   
   // Obtain the FIRST reader name...
-  LocateReader(&readerName);
+  readerCount = getSmartCardReaders(&pReaderNames);
   
-  if (NULL == readerName)
+  if (0 == readerCount)
   {
     WLog_ERR(TAG, "No smart card reader(s) available\n");
   }
@@ -580,196 +624,203 @@ scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
     }
     else
     {
-      WCHAR              szScope[256];
-      NCryptKeyName     *ppKeyName = NULL;
-      PVOID              ppEnumState = NULL;
-      DWORD              idxcount = 0;
-      scquery_result_t   localIdentity;
-      
-      // Create the windows reader name string to scope the results...
+      for (int index = 0; ((index < readerCount) && (NULL == identityPtr)); ++index)
       {
-        int length = swprintf_s(szScope, 256, L"\\\\.\\");
-        wcscpy_s(&szScope[length], 256-length, readerName);
-        length = wcslen(szScope);
-        szScope[length] = '\\';
-        szScope[length + 1] = '\0';
-      }
-      
-      // DEBUG...
-      if (WLog_IsLevelActive(WLog_Get(TAG), WLOG_DEBUG))
-      {
-        int length = wcslen(szScope);
-        char *tmpReaderName = malloc(length+1);
-        wcstombs(tmpReaderName, szScope, length);
-        tmpReaderName[length] = '\0';
-        WLog_DBG(TAG, "enumerating provider: %s @reader: %d -> %s\n", settings->CspName, length, tmpReaderName);
-        free(tmpReaderName);
-      }
-      
-      while (ERROR_SUCCESS == NCryptEnumKeys(phProvider, szScope, &ppKeyName, &ppEnumState, 0))
-      {
-        printf("name: %S algorithm: %S keySpec: %ld (0x%X) flags: %ld\n",
-               ppKeyName->pszName, ppKeyName->pszAlgid, ppKeyName->dwLegacyKeySpec, (unsigned int)ppKeyName->dwLegacyKeySpec, ppKeyName->dwFlags);
+        WCHAR              szScope[256];
+        NCryptKeyName     *ppKeyName = NULL;
+        PVOID              ppEnumState = NULL;
+        DWORD              idxcount = 0;
+        scquery_result_t   localIdentity;
+        LPWSTR             readerName = pReaderNames[index];
         
-        NCRYPT_KEY_HANDLE  phKey;
-        DWORD              dwFlags = 0;
-        
-        status = NCryptOpenKey(phProvider, &phKey, ppKeyName->pszName, ppKeyName->dwLegacyKeySpec, dwFlags);
-        
-        if (ERROR_SUCCESS != status)
+        // Create the windows reader name string to scope the results...
         {
-          WLog_ERR(TAG, "NCryptOpenKey error: %ld (0x%0X)\n", status, (unsigned int)status);
-          scquery_result_free(identityPtr);
-          identityPtr = NULL;
-          break;
+          int length = swprintf_s(szScope, 256, L"\\\\.\\");
+          wcscpy_s(&szScope[length], 256-length, readerName);
+          length = wcslen(szScope);
+          szScope[length] = '\\';
+          szScope[length + 1] = '\0';
         }
-        else
+        
+        // DEBUG...
+        //if (WLog_IsLevelActive(WLog_Get(TAG), WLOG_DEBUG))
         {
-          identityPtr = malloc(sizeof(scquery_result_t));
-          memset(identityPtr, 0, sizeof(scquery_result_t));
+          int length = wcslen(szScope);
+          char *tmpReaderName = malloc(length+1);
+          wcstombs(tmpReaderName, szScope, length);
+          tmpReaderName[length] = '\0';
+          WLog_DBG(TAG, "enumerating provider: %s @reader: %d -> %s\n", settings->CspName, length, tmpReaderName);
+          printf("enumerating provider: %s @reader: %d -> %s\n", settings->CspName, length, tmpReaderName);
+          free(tmpReaderName);
+        }
+        
+        while (ERROR_SUCCESS == NCryptEnumKeys(phProvider, szScope, &ppKeyName, &ppEnumState, 0))
+        {
+          printf("name: %S algorithm: %S keySpec: %ld (0x%X) flags: %ld\n",
+                 ppKeyName->pszName, ppKeyName->pszAlgid, ppKeyName->dwLegacyKeySpec, (unsigned int)ppKeyName->dwLegacyKeySpec, ppKeyName->dwFlags);
           
-          identityPtr->certificate = malloc(sizeof(smartcard_certificate_t));
-          memset(identityPtr->certificate, 0, sizeof(smartcard_certificate_t));
+          NCRYPT_KEY_HANDLE  phKey;
+          DWORD              dwFlags = 0;
           
-          // Container name...
-          identityPtr->certificate->id = malloc(wcslen(ppKeyName->pszName)+1);
-          memset(identityPtr->certificate->id, 0, wcslen(ppKeyName->pszName)+1);
-          wcstombs(identityPtr->certificate->id, ppKeyName->pszName, wcslen(ppKeyName->pszName));
+          status = NCryptOpenKey(phProvider, &phKey, ppKeyName->pszName, ppKeyName->dwLegacyKeySpec, dwFlags);
           
-          // Slot ID...
-          identityPtr->certificate->slot_id = idxcount;
-          identityPtr->certificate->type = CKC_X_509;
-          
-          // Reader name...
-          identityPtr->certificate->slot_description = calloc(wcslen(readerName)+1, sizeof(char));
-          memset(identityPtr->certificate->slot_description, 0, wcslen(readerName)+1);
-          wcstombs(identityPtr->certificate->slot_description, readerName, wcslen(readerName));
-          
+          if (ERROR_SUCCESS != status)
           {
-            DWORD   cbOutput = 256;
-            DWORD   dwFlags = 0;
+            WLog_ERR(TAG, "NCryptOpenKey error: %ld (0x%0X)\n", status, (unsigned int)status);
+            scquery_result_free(identityPtr);
+            identityPtr = NULL;
+            continue;
+          }
+          else
+          {
+            identityPtr = malloc(sizeof(scquery_result_t));
+            memset(identityPtr, 0, sizeof(scquery_result_t));
             
-            status = NCryptGetProperty(phKey, NCRYPT_CERTIFICATE_PROPERTY, NULL, 0, &cbOutput, dwFlags);
-            PBYTE    pbOutput = (PBYTE)malloc(cbOutput);
-            status = NCryptGetProperty(phKey, NCRYPT_CERTIFICATE_PROPERTY, pbOutput, cbOutput, &cbOutput, dwFlags);
+            identityPtr->certificate = malloc(sizeof(smartcard_certificate_t));
+            memset(identityPtr->certificate, 0, sizeof(smartcard_certificate_t));
             
-            if (ERROR_SUCCESS != status)
+            // Container name...
+            identityPtr->certificate->id = malloc(wcslen(ppKeyName->pszName)+1);
+            memset(identityPtr->certificate->id, 0, wcslen(ppKeyName->pszName)+1);
+            wcstombs(identityPtr->certificate->id, ppKeyName->pszName, wcslen(ppKeyName->pszName));
+            
+            // Slot ID...
+            identityPtr->certificate->slot_id = idxcount;
+            identityPtr->certificate->type = CKC_X_509;
+            
+            // Reader name...
+            identityPtr->certificate->slot_description = calloc(wcslen(readerName)+1, sizeof(char));
+            memset(identityPtr->certificate->slot_description, 0, wcslen(readerName)+1);
+            wcstombs(identityPtr->certificate->slot_description, readerName, wcslen(readerName));
+            
             {
-              WLog_ERR(TAG, "NCryptGetProperty (%S) error: %ld (0x%0X)\n", NCRYPT_CERTIFICATE_PROPERTY, status, (unsigned int)status);
-            }
-            else
-            {
+              DWORD   cbOutput = 256;
+              DWORD   dwFlags = 0;
+              
+              status = NCryptGetProperty(phKey, NCRYPT_CERTIFICATE_PROPERTY, NULL, 0, &cbOutput, dwFlags);
+              PBYTE    pbOutput = (PBYTE)malloc(cbOutput);
+              status = NCryptGetProperty(phKey, NCRYPT_CERTIFICATE_PROPERTY, pbOutput, cbOutput, &cbOutput, dwFlags);
+              
+              if (ERROR_SUCCESS != status)
               {
-                // Get card name...
-                if (-1 == getAtrCardName(readerName, identityPtr))
+                WLog_ERR(TAG, "NCryptGetProperty (%S) error: %ld (0x%0X)\n", NCRYPT_CERTIFICATE_PROPERTY, status, (unsigned int)status);
+              }
+              else
+              {
                 {
-                  scquery_result_free(identityPtr);
-                  identityPtr = NULL;
-                  continue;
-                }
-                
-                PCCERT_CONTEXT pcontext = CertCreateCertificateContext(PKCS_7_ASN_ENCODING | X509_ASN_ENCODING, pbOutput, cbOutput);
-                if (NULL == pcontext)
-                {
-                  WLog_ERR(TAG, "CertCreateCertificateContext error: %ld (0x%0X)\n", GetLastError(), (unsigned int)GetLastError());
-                  printf("CertCreateCertificateContext error: %ld (0x%0X)\n", GetLastError(), (unsigned int)GetLastError());
-                  scquery_result_free(identityPtr);
-                  identityPtr = NULL;
-                  continue;
-                }
-                else
-                {
-                  // Need to first ascertain whether this certificate is allowed for authentication/smart card logon...
-                  if (-1 == validateSmartCardUsage(pcontext, identityPtr))
+                  // Get card name...
+                  if (-1 == getAtrCardName(readerName, identityPtr))
                   {
                     scquery_result_free(identityPtr);
                     identityPtr = NULL;
                     continue;
                   }
                   
-                  // Get UPN (User Principal Name)...need the certificate for this...
-                  if (-1 == validateSmartCardUser(pcontext, identityPtr))
+                  PCCERT_CONTEXT pcontext = CertCreateCertificateContext(PKCS_7_ASN_ENCODING | X509_ASN_ENCODING, pbOutput, cbOutput);
+                  if (NULL == pcontext)
                   {
-                    // Absent or invalid UPN as an error ONLY if we're requesting a particular
-                    // username sequence...
-                    if ((NULL == settings->Username) || (0 != strlen(settings->Username)))
-                    {
-                      scquery_result_free(identityPtr);
-                      identityPtr = NULL;
-                      continue;
-                    }
-                    WLog_INFO(TAG, "continuing withot UPN\n");
+                    WLog_ERR(TAG, "CertCreateCertificateContext error: %ld (0x%0X)\n", GetLastError(), (unsigned int)GetLastError());
+                    printf("CertCreateCertificateContext error: %ld (0x%0X)\n", GetLastError(), (unsigned int)GetLastError());
+                    scquery_result_free(identityPtr);
+                    identityPtr = NULL;
+                    continue;
                   }
-                  else if ((NULL != settings->Username) && (0 != strlen(settings->Username)))
+                  else
                   {
-                    // Check username for at least a partial patch...
-                    if (NULL == strstr(identityPtr->upn, settings->Username))
+                    // Need to first ascertain whether this certificate is allowed for authentication/smart card logon...
+                    if (-1 == validateSmartCardUsage(pcontext, identityPtr))
                     {
-                      WLog_ERR(TAG, "username mismatch: %s vs. %s\n", settings->Username, identityPtr->upn);
-                      // No occurrance of requested partial username....
                       scquery_result_free(identityPtr);
                       identityPtr = NULL;
                       continue;
                     }
                     
-                    // We can use this certificate...
-                    WLog_INFO(TAG, "username match: %s vs. %s\n", settings->Username, identityPtr->upn);
-                  }
-                  
-                  // X500 name string (X509 compatible???)...
-                  {
-                    WCHAR namestring[256] = { 0 };
-                    CERT_NAME_BLOB nameblob = { pcontext->pCertInfo->Subject.cbData, pcontext->pCertInfo->Subject.pbData };
-                    DWORD converted = CertNameToStr(X509_ASN_ENCODING, &nameblob, CERT_X500_NAME_STR | CERT_NAME_STR_REVERSE_FLAG, namestring, 256);
-                    if (0 == converted)
+                    // Get UPN (User Principal Name)...need the certificate for this...
+                    if (-1 == getCertificateUPN(pcontext, identityPtr))
                     {
-                      WLog_ERR(TAG, "X500 name error (CERT_X500_NAME_STR): %d (0x%0X)\n", GetLastError(), GetLastError());
-                      scquery_result_free(identityPtr);
-                      identityPtr = NULL;
-                      continue;
+                      // Absent or invalid UPN as an error ONLY if we're requesting a particular
+                      // username sequence...
+                      if ((NULL == settings->Username) || (0 != strlen(settings->Username)))
+                      {
+                        scquery_result_free(identityPtr);
+                        identityPtr = NULL;
+                        continue;
+                      }
+                      WLog_INFO(TAG, "continuing withot UPN\n");
                     }
                     else
                     {
-                      printf("X500 name: %ld string: %S\n", converted, namestring);
-                      identityPtr->X509_user_identity = calloc(wcslen(namestring)+1, sizeof(char));
-                      memset(identityPtr->X509_user_identity, 0, wcslen(namestring)+1);
-                      wcstombs(identityPtr->X509_user_identity, namestring, wcslen(namestring));
+                      if (-1 == validateSmartCardUsername(identityPtr, settings))
+                      {
+                        WLog_ERR(TAG, "username mismatch: %s vs. %s\n", settings->Username, identityPtr->upn);
+                        // No occurrance of requested partial username....
+                        scquery_result_free(identityPtr);
+                        identityPtr = NULL;
+                        continue;
+                      }
+                      
+                      // We can use this certificate...
+                      WLog_INFO(TAG, "username match: %s vs. %s\n", settings->Username, identityPtr->upn);
                     }
+                    
+                    // X500 name string (X509 compatible???)...
+                    {
+                      WCHAR namestring[256] = { 0 };
+                      CERT_NAME_BLOB nameblob = { pcontext->pCertInfo->Subject.cbData, pcontext->pCertInfo->Subject.pbData };
+                      DWORD converted = CertNameToStr(X509_ASN_ENCODING, &nameblob, CERT_X500_NAME_STR | CERT_NAME_STR_REVERSE_FLAG, namestring, 256);
+                      if (0 == converted)
+                      {
+                        WLog_ERR(TAG, "X500 name error (CERT_X500_NAME_STR): %d (0x%0X)\n", GetLastError(), GetLastError());
+                        scquery_result_free(identityPtr);
+                        identityPtr = NULL;
+                        continue;
+                      }
+                      else
+                      {
+                        printf("X500 name: %ld string: %S\n", converted, namestring);
+                        identityPtr->X509_user_identity = calloc(wcslen(namestring)+1, sizeof(char));
+                        memset(identityPtr->X509_user_identity, 0, wcslen(namestring)+1);
+                        wcstombs(identityPtr->X509_user_identity, namestring, wcslen(namestring));
+                      }
+                    }
+                    
+                    // Certificate serial...
+                    identityPtr->certificate->token_serial = reversePropertyValue(pcontext->pCertInfo->SerialNumber.cbData, pcontext->pCertInfo->SerialNumber.pbData);
+                    printf("cert info serial: %ld - ", pcontext->pCertInfo->SerialNumber.cbData);
+                    dumpPropertyValue(pcontext->pCertInfo->SerialNumber.cbData, identityPtr->certificate->token_serial);
                   }
-                  
-                  // Certificate serial...
-                  identityPtr->certificate->token_serial = reversePropertyValue(pcontext->pCertInfo->SerialNumber.cbData, pcontext->pCertInfo->SerialNumber.pbData);
-                  printf("cert info serial: %ld - ", pcontext->pCertInfo->SerialNumber.cbData);
-                  dumpPropertyValue(pcontext->pCertInfo->SerialNumber.cbData, identityPtr->certificate->token_serial);
                 }
               }
+              
+              // Free the buffer...
+              free(pbOutput);
             }
             
-            // Free the buffer...
-            free(pbOutput);
+            // Cleanup...
+            NCryptFreeObject(phKey);
+            
+            // Cleanup...
+            NCryptFreeBuffer(ppKeyName);
           }
           
-          // Cleanup...
-          NCryptFreeObject(phKey);
+          // Post index...
+          ++idxcount;
           
-          // Cleanup...
-          NCryptFreeBuffer(ppKeyName);
+          // Done..while loop for keys on card...
+          if (NULL != (identityPtr))
+            break;
         }
         
-        // Post index...
-        ++idxcount;
-        
-        // Done..
-        if (NULL != (identityPtr))
-          break;
+        // While key enum state cleanup...
+        NCryptFreeBuffer(ppEnumState);
       }
-      
-      NCryptFreeBuffer(ppEnumState);
     }
     
     // Cleanup
     NCryptFreeObject(phProvider);
-    free(readerName);
+    for (int index = 0; index < readerCount; ++index)
+      free(pReaderNames[index]);
+    free(pReaderNames);
     free(cspname);
   }
   

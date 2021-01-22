@@ -27,7 +27,6 @@
 #include <winpr/crypto.h>
 
 // Prototypes...
-int getCryptoCredentialForKeyName(LPWSTR keyname, LPWSTR *credential);
 LPWSTR getMarshaledCredentials(char *keyname);
 
 #endif /* smartcard_windows_h */
