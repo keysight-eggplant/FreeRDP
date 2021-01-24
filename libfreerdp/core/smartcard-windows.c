@@ -132,7 +132,8 @@ static int validateSmartCardUsage(PCCERT_CONTEXT pcontext, scquery_result identi
   }
   else
   {
-    // TODO: Need more error checking here!!!
+    // THe Enhanced Key Usage field contains the OID's that are valid
+    // for a particular certificate...
     PCERT_ENHKEY_USAGE pusage = (PCERT_ENHKEY_USAGE)malloc(dusage);
     
     // ANY erroros will skip this certificate...
@@ -143,8 +144,8 @@ static int validateSmartCardUsage(PCCERT_CONTEXT pcontext, scquery_result identi
     }
     else
     {
-      BOOL status = CertGetEnhancedKeyUsage(pcontext, flags, pusage, &dusage);
-      DWORD errorcode = GetLastError();
+      BOOL  status = CertGetEnhancedKeyUsage(pcontext, flags, pusage, &dusage);
+      DWORD errorcode = GetLastError(); // Could this in the if but wanted to ensure validity
       
       if ((FALSE == status) && (CRYPT_E_NOT_FOUND != errorcode))
       {
@@ -165,7 +166,12 @@ static int validateSmartCardUsage(PCCERT_CONTEXT pcontext, scquery_result identi
       else
       {
         LPSTR *string = pusage->rgpszUsageIdentifier;
-        int    foundCount = 0; // Need this to be 2 - SMART_CARD_LOGON_OID && CLIENT_AUTHENTICATION_OID - otherwise fail...
+        int    foundCount = 0;
+        
+        // At a minimu we're currently looking for 2:
+        // SMART_CARD_LOGON_OID
+        // CLIENT_AUTHENTICATION_OID
+        // - otherwise fail...
         for (int index = 0; index < pusage->cUsageIdentifier; ++index)
         {
           int length = strlen(string[index]);
@@ -335,6 +341,10 @@ static int getCryptoCredentialForKeyName(LPWSTR keyname, LPWSTR *credential)
   }
   *credential = NULL;
   
+  // We're using the Cryptography API: Next Generation (CNG) family of functions
+  // from Microsoft.  The previous generation of functions have been deprecated,
+  // and according to MSDN documentation, the older generation could be removed
+  // at the whim of Microsoft...
   SECURITY_STATUS    status = NCryptOpenStorageProvider(&phProvider, MS_SCARD_PROV, 0);
   
   if (ERROR_SUCCESS != status)
@@ -495,6 +505,11 @@ LPWSTR getMarshaledCredentials(char *keyname)
   LPTSTR szMarshaledCred = NULL;
   LPWSTR credentials = NULL;
   
+  // TODO: This function uses the OLDER Crypto API from Microsoft.  These functions
+  // have been deprecated by Microsoft, and this should be rewritten against the
+  // newer one, Cryptography API: Next Generation (CNG)...
+  // See the dicussion at this link for an explanation of a CNG equivalent solution:
+  // https://docs.microsoft.com/en-us/windows/win32/seccng/creating-a-hash-with-cng
   if (NULL == keyname)
   {
     WLog_ERR(TAG, "getMarshaledCredentials - keyname is NULL");
@@ -727,7 +742,8 @@ scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
                   }
                   else
                   {
-                    // Need to first ascertain whether this certificate is allowed for authentication/smart card logon...
+                    // Need to first ascertain whether this certificate is allowed for
+                    // authentication/smart card logon...
                     if (-1 == validateSmartCardUsage(pcontext, identityPtr))
                     {
                       scquery_result_free(identityPtr);
@@ -735,6 +751,11 @@ scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
                       continue;
                     }
                     
+                    // Check requested username agaisnt UPN...
+                    // TODO: We should also consider implementing checking the username
+                    // against the associated Container Name (CN) fields within the X509
+                    // string...
+
                     // Get UPN (User Principal Name)...need the certificate for this...
                     if (-1 == getCertificateUPN(pcontext, identityPtr))
                     {
@@ -746,6 +767,8 @@ scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
                         identityPtr = NULL;
                         continue;
                       }
+                      
+                      // Otherwise...
                       WLog_INFO(TAG, "continuing withot UPN\n");
                     }
                     else
@@ -764,6 +787,15 @@ scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
                     }
                     
                     // X500 name string (X509 compatible???)...
+                    // TODO: We should also consider implementing checking the username
+                    // against the associated Container Name (CN) fields within the X509
+                    // string...
+                    // NOTE: A section of code from Pascal's original implementation against
+                    // PKCS11 was also extracting this - but I don't see anywhere within
+                    // his FreeRDP implementation that actually needed this.  If the X509
+                    // string is never used at some point in the future then we could just
+                    // remove this section, but since it's all working I am not going to
+                    // fiddle with it...
                     {
                       WCHAR namestring[256] = { 0 };
                       CERT_NAME_BLOB nameblob = { pcontext->pCertInfo->Subject.cbData, pcontext->pCertInfo->Subject.pbData };
