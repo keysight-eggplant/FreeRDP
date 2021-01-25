@@ -1,6 +1,8 @@
 #ifndef LIBFREERDP_CORE_SMARTCARDLOGON_H
 #define LIBFREERDP_CORE_SMARTCARDLOGON_H
 #include <freerdp/settings.h>
+
+#if defined(WITH_SMARTCARD_LOGON)
 //#include "../scquery/scquery.h"
 //#include "../scquery/scquery_error.h"
 //#include "certificate.h"
@@ -35,7 +37,6 @@ int get_info_smartcard(rdpSettings* settings);
 void  scquery_result_free_parts(scquery_result that);
 void  scquery_result_free(scquery_result that);
 
-#if defined(WITH_SMARTCARD_LOGON)
 scquery_result getUserIdentityFromSmartcard(rdpSettings *settings);
 #endif
 
