@@ -3584,12 +3584,14 @@ int freerdp_client_settings_parse_command_line_arguments(rdpSettings* settings,
 			settings->Username = user;
 		}
 
+#if 0		// Allow searching on username so omit this code...
 		if (settings->SmartcardLogon)
 		{
 			/* We don't need the Username for smartcard logon */
 			free(settings->Username);
 			settings->Username = NULL;
 		}
+#endif
 	}
 
 	if (gwUser)
