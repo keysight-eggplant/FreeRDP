@@ -15,7 +15,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
-*/
+ */
 
 #include <stdio.h>
 #include "smartcard-windows.h"
@@ -85,19 +85,36 @@ static int getCertificateUPN(PCCERT_CONTEXT pcontext, scquery_result identityPtr
   return ((NULL == identityPtr) ? -1 : 0);
 }
 
-static int validateSmartCardUsername(scquery_result identityPtr, rdpSettings *settings)
+static int validateSmartCardUsername(const char *UPN, const char *Username, bool exactly)
 {
-  if ((NULL != settings->Username) && (0 != strlen(settings->Username)))
+  if (((NULL != UPN) && (0 != strlen(UPN))) &&
+      ((NULL != Username) && (0 != strlen(Username))))
   {
-    char *upn      = _strdup(identityPtr->upn);
-    char *username = _strdup(settings->Username);
+    // _strlwr modifies the string so we dup here...
+    char *upn      = _strdup(UPN);
+    char *username = _strdup(Username);
     
     // Convert to lower case...
     _strlwr(upn);
     _strlwr(username);
     
     // Check username for at least a partial patch...
-    char *resultptr = strstr(upn, username);
+    char *resultptr = NULL;
+    
+    // Requesting an exact match???
+    if (false == exactly)
+    {
+      // Partial match request...
+      resultptr = strstr(upn, username);
+    }
+    else
+    {
+      // Exact match request...
+      if (0 == strcmp(upn, username))
+      {
+        resultptr = username;
+      }
+    }
     
     // Free memory before continuing...
     free(upn);
@@ -105,13 +122,10 @@ static int validateSmartCardUsername(scquery_result identityPtr, rdpSettings *se
     
     if (NULL == resultptr)
     {
-      WLog_ERR(TAG, "username mismatch: %s vs. %s\n", settings->Username, identityPtr->upn);
+      WLog_ERR(TAG, "username mismatch: %s vs. %s\n", Username, UPN);
       // No occurrance of requested partial username....
       return -1;
     }
-    
-    // We can use this certificate...
-    WLog_INFO(TAG, "username match: %s vs. %s\n", settings->Username, identityPtr->upn);
   }
   
   return 0;
@@ -723,6 +737,8 @@ scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
               else
               {
                 {
+                  bool usernameMatched = false;
+                  
                   // Get card name...
                   if (-1 == getAtrCardName(readerName, identityPtr))
                   {
@@ -751,29 +767,103 @@ scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
                       continue;
                     }
                     
+                    // X500 name string (X509 compatible???)...
+                    // NOTE: A section of code from Pascal's original implementation against
+                    // PKCS11 was also extracting this - but I don't see anywhere within
+                    // his FreeRDP implementation that actually needed this.  We do this only
+                    // only to support username search matching...
+                    {
+                      WCHAR namestring[256] = { 0 };
+                      CERT_NAME_BLOB nameblob = { pcontext->pCertInfo->Subject.cbData, pcontext->pCertInfo->Subject.pbData };
+                      DWORD converted = CertNameToStr(X509_ASN_ENCODING, &nameblob, CERT_X500_NAME_STR | CERT_NAME_STR_REVERSE_FLAG, namestring, 256);
+                      
+                      if (0 == converted)
+                      {
+                        WLog_ERR(TAG, "X500 name error (CERT_X500_NAME_STR): %d (0x%0X)\n", GetLastError(), GetLastError());
+                        scquery_result_free(identityPtr);
+                        identityPtr = NULL;
+                        continue;
+                      }
+                      else
+                      {
+                        identityPtr->X509_user_identity = calloc(wcslen(namestring)+1, sizeof(char));
+                        memset(identityPtr->X509_user_identity, 0, wcslen(namestring)+1);
+                        wcstombs(identityPtr->X509_user_identity, namestring, wcslen(namestring));
+                        WLog_INFO(TAG, "X500 name: %ld string: %s\n",
+                                  identityPtr->X509_user_identity, namestring);
+                        
+                        {
+                          static const char *CommonNamePrefix       = "CN=";
+                          static const int   CommonNamePrefixLength = 3;
+                          
+                          char *x509_string = _strdup(identityPtr->X509_user_identity);
+                          char *token       = strtok(x509_string, ",");
+                          
+                          // Loop through the string(s), find the 'CN=" prefixed ones,
+                          // and check against the username for an EXACT MATCH...
+                          while (NULL != token)
+                          {
+                            // Remove leading whitespace if present...
+                            if (' ' == token[0])
+                              token++;
+                            
+                            // Check for sufficient characters for prefix string...
+                            if (CommonNamePrefixLength < strlen(token))
+                            {
+                              // Check for common name prefix match...
+                              if (0 == memcmp(CommonNamePrefix, token, CommonNamePrefixLength))
+                              {
+                                const char *cnfield = &token[CommonNamePrefixLength];
+                                // true indicates EXACT match request on CN field name...
+                                DWORD validate = validateSmartCardUsername(cnfield, settings->Username, true);
+                                
+                                // If it validates then...
+                                if (0 == validate)
+                                {
+                                  WLog_INFO(TAG, "common name match: %s vs. %s\n", settings->Username, token);
+                                  
+                                  // We're done...
+                                  usernameMatched = true;
+                                  break;
+                                }
+                              }
+                            }
+                            
+                            // Loop thru the next token...
+                            token = strtok(NULL, ",");
+                          }
+                          
+                          // Cleanup
+                          free(x509_string); // Duped string...
+                        }
+                      }
+                    }
+                    
                     // Check requested username agaisnt UPN...
                     // TODO: We should also consider implementing checking the username
                     // against the associated Container Name (CN) fields within the X509
                     // string...
-
+                    
                     // Get UPN (User Principal Name)...need the certificate for this...
                     if (-1 == getCertificateUPN(pcontext, identityPtr))
                     {
                       // Absent or invalid UPN as an error ONLY if we're requesting a particular
                       // username sequence...
-                      if ((NULL == settings->Username) || (0 != strlen(settings->Username)))
+                      if (false == usernameMatched)
                       {
-                        scquery_result_free(identityPtr);
-                        identityPtr = NULL;
-                        continue;
+                        if ((NULL == settings->Username) || (0 == strlen(settings->Username)))
+                        {
+                          scquery_result_free(identityPtr);
+                          identityPtr = NULL;
+                          continue;
+                        }
                       }
-                      
                       // Otherwise...
                       WLog_INFO(TAG, "continuing withot UPN\n");
                     }
-                    else
+                    else if (false == usernameMatched)
                     {
-                      if (-1 == validateSmartCardUsername(identityPtr, settings))
+                      if (-1 == validateSmartCardUsername(identityPtr->upn, settings->Username, false))
                       {
                         WLog_ERR(TAG, "username mismatch: %s vs. %s\n", settings->Username, identityPtr->upn);
                         // No occurrance of requested partial username....
@@ -784,41 +874,12 @@ scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
                       
                       // We can use this certificate...
                       WLog_INFO(TAG, "username match: %s vs. %s\n", settings->Username, identityPtr->upn);
-                    }
-                    
-                    // X500 name string (X509 compatible???)...
-                    // TODO: We should also consider implementing checking the username
-                    // against the associated Container Name (CN) fields within the X509
-                    // string...
-                    // NOTE: A section of code from Pascal's original implementation against
-                    // PKCS11 was also extracting this - but I don't see anywhere within
-                    // his FreeRDP implementation that actually needed this.  If the X509
-                    // string is never used at some point in the future then we could just
-                    // remove this section, but since it's all working I am not going to
-                    // fiddle with it...
-                    {
-                      WCHAR namestring[256] = { 0 };
-                      CERT_NAME_BLOB nameblob = { pcontext->pCertInfo->Subject.cbData, pcontext->pCertInfo->Subject.pbData };
-                      DWORD converted = CertNameToStr(X509_ASN_ENCODING, &nameblob, CERT_X500_NAME_STR | CERT_NAME_STR_REVERSE_FLAG, namestring, 256);
-                      if (0 == converted)
-                      {
-                        WLog_ERR(TAG, "X500 name error (CERT_X500_NAME_STR): %d (0x%0X)\n", GetLastError(), GetLastError());
-                        scquery_result_free(identityPtr);
-                        identityPtr = NULL;
-                        continue;
-                      }
-                      else
-                      {
-                        printf("X500 name: %ld string: %S\n", converted, namestring);
-                        identityPtr->X509_user_identity = calloc(wcslen(namestring)+1, sizeof(char));
-                        memset(identityPtr->X509_user_identity, 0, wcslen(namestring)+1);
-                        wcstombs(identityPtr->X509_user_identity, namestring, wcslen(namestring));
-                      }
+                      usernameMatched = true;
                     }
                     
                     // Certificate serial...
                     identityPtr->certificate->token_serial = reversePropertyValue(pcontext->pCertInfo->SerialNumber.cbData, pcontext->pCertInfo->SerialNumber.pbData);
-                    printf("cert info serial: %ld - ", pcontext->pCertInfo->SerialNumber.cbData);
+                    WLog_DBG(TAG, "cert info serial: %ld - ", pcontext->pCertInfo->SerialNumber.cbData);
                     dumpPropertyValue(pcontext->pCertInfo->SerialNumber.cbData, identityPtr->certificate->token_serial);
                   }
                 }
@@ -860,4 +921,5 @@ scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 }
 
 #endif
+
 
