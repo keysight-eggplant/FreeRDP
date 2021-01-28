@@ -79,7 +79,7 @@ static int getCertificateUPN(PCCERT_CONTEXT pcontext, scquery_result identityPtr
 		identityPtr->upn = malloc(wcslen(namestring)+1);
 		memset(identityPtr->upn, 0, wcslen(namestring)+1);
 		wcstombs(identityPtr->upn, namestring, wcslen(namestring));
-		printf("UPN: %s\n", identityPtr->upn);
+		WLog_DBG(TAG, "UPN: %s\n", identityPtr->upn);
 	}
 	
 	return ((NULL == identityPtr) ? -1 : 0);
@@ -237,7 +237,6 @@ static int getAtrCardName(LPWSTR readerName, scquery_result identityPtr)
 	if (0 == scContext)
 	{
 		WLog_ERR(TAG, "SCardEstablishContext error: %ld (0x%0X)\n", status, (unsigned int)status);
-		printf("SCardEstablishContext error: %ld (0x%0X)\n", status, (unsigned int)status);
 		SCardReleaseContext(scContext);
 		return -1;
 	}
@@ -253,7 +252,6 @@ static int getAtrCardName(LPWSTR readerName, scquery_result identityPtr)
 		if (ERROR_SUCCESS != status)
 		{
 			WLog_ERR(TAG, "SCardConnect error: %ld (0x%0X)\n", status, (unsigned int)status);
-			printf("SCardConnect error: %ld (0x%0X)\n", status, (unsigned int)status);
 			SCardReleaseContext(scContext);
 			return -1;
 		}
@@ -269,7 +267,6 @@ static int getAtrCardName(LPWSTR readerName, scquery_result identityPtr)
 		if (ERROR_SUCCESS != status)
 		{
 			WLog_ERR(TAG, "SCardGetAttrib error: %ld (0x%0X)\n", status, (unsigned int)status);
-			printf("SCardGetAttrib error: %ld (0x%0X)\n", status, (unsigned int)status);
 			SCardDisconnect(scContext, SCARD_LEAVE_CARD);
 			SCardReleaseContext(scContext);
 			return -1;
@@ -283,13 +280,12 @@ static int getAtrCardName(LPWSTR readerName, scquery_result identityPtr)
 		if (ERROR_SUCCESS != status)
 		{
 			WLog_ERR(TAG, "SCardListCards error: %ld (0x%0X)\n", status, (unsigned int)status);
-			printf("SCardListCards error: %ld (0x%0X)\n", status, (unsigned int)status);
 			SCardDisconnect(scContext, SCARD_LEAVE_CARD);
 			SCardReleaseContext(scContext);
 		}
 		else
 		{
-			printf("ATR name: %ld -> %S\n", cbLength, atrname);
+			WLog_DBG(TAG, "ATR name: %ld -> %S\n", cbLength, atrname);
 			
 			// Some readers/cards seem to have the following embedded text: '(Identity Device)':
 			// This creates a problem when passing the reader name via the RDP protocol so
@@ -303,7 +299,6 @@ static int getAtrCardName(LPWSTR readerName, scquery_result identityPtr)
 				// Convert to char string...
 				wcstombs(identityPtr->certificate->token_label, atrname, cbLength);
 				WLog_DBG(TAG, "Card name: %ld -> %s\n", cbLength, identityPtr->certificate->token_label);
-				printf("Card name: %ld -> %s\n", cbLength, identityPtr->certificate->token_label);
 			}
 			else
 			{
@@ -313,7 +308,6 @@ static int getAtrCardName(LPWSTR readerName, scquery_result identityPtr)
 				if ((NULL == pos1) || (NULL == pos2))
 				{
 					WLog_ERR(TAG, "card name error: %ld (0x%0X)\n", GetLastError(), (unsigned int)GetLastError());
-					printf("card name error: %ld (0x%0X)\n", GetLastError(), (unsigned int)GetLastError());
 					SCardDisconnect(scContext, SCARD_LEAVE_CARD);
 					SCardReleaseContext(scContext);
 				}
@@ -331,7 +325,6 @@ static int getAtrCardName(LPWSTR readerName, scquery_result identityPtr)
 					// Convert to char string...
 					wcstombs(identityPtr->certificate->token_label, pos1 + 1, size-1);
 					WLog_DBG(TAG, "Card name: %d -> %s\n", size, identityPtr->certificate->token_label);
-					printf("Card name: %d -> %s\n", size, identityPtr->certificate->token_label);
 				}
 			}
 		}
@@ -679,14 +672,14 @@ scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 					wcstombs(tmpReaderName, szScope, length);
 					tmpReaderName[length] = '\0';
 					WLog_DBG(TAG, "enumerating provider: %s @reader: %d -> %s\n", settings->CspName, length, tmpReaderName);
-					printf("enumerating provider: %s @reader: %d -> %s\n", settings->CspName, length, tmpReaderName);
 					free(tmpReaderName);
 				}
 				
 				while (ERROR_SUCCESS == NCryptEnumKeys(phProvider, szScope, &ppKeyName, &ppEnumState, 0))
 				{
-					printf("name: %S algorithm: %S keySpec: %ld (0x%X) flags: %ld\n",
-								 ppKeyName->pszName, ppKeyName->pszAlgid, ppKeyName->dwLegacyKeySpec, (unsigned int)ppKeyName->dwLegacyKeySpec, ppKeyName->dwFlags);
+					WLog_DBG(TAG, "name: %S algorithm: %S keySpec: %ld (0x%X) flags: %ld\n",
+									 ppKeyName->pszName, ppKeyName->pszAlgid, ppKeyName->dwLegacyKeySpec,
+									 (unsigned int)ppKeyName->dwLegacyKeySpec, ppKeyName->dwFlags);
 					
 					NCRYPT_KEY_HANDLE  phKey;
 					DWORD              dwFlags = 0;
@@ -751,7 +744,6 @@ scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 									if (NULL == pcontext)
 									{
 										WLog_ERR(TAG, "CertCreateCertificateContext error: %ld (0x%0X)\n", GetLastError(), (unsigned int)GetLastError());
-										printf("CertCreateCertificateContext error: %ld (0x%0X)\n", GetLastError(), (unsigned int)GetLastError());
 										scquery_result_free(identityPtr);
 										identityPtr = NULL;
 										continue;
@@ -865,7 +857,7 @@ scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 										{
 											if (-1 == validateSmartCardUsername(identityPtr->upn, settings->Username, false))
 											{
-												WLog_ERR(TAG, "username mismatch: %s vs. %s\n", settings->Username, identityPtr->upn);
+												WLog_DBG(TAG, "username mismatch: %s vs. %s\n", settings->Username, identityPtr->upn);
 												// No occurrance of requested partial username....
 												scquery_result_free(identityPtr);
 												identityPtr = NULL;
