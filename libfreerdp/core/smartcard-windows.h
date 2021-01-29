@@ -20,10 +20,13 @@
 #ifndef smartcard_windows_h
 #define smartcard_windows_h
 
-#include "smartcardlogon.h"
+#include <freerdp/settings.h>
+#include <wincrypt.h>
+#include <WinCred.h>
+#include <WinScard.h>
+#include <winpr/crypto.h>
 
 // Prototypes...
-int getCryptoCredentialForKeyName(LPWSTR keyname, LPWSTR *credential);
 LPWSTR getMarshaledCredentials(char *keyname);
 
 #endif /* smartcard_windows_h */

@@ -50,7 +50,9 @@
 #include "nla.h"
 #include "tscredentials.h"
 #ifdef HAVE_CONFIG_H
+#if defined(WITH_SMARTCARD_LOGON) && defined(_WIN32)
 #include "smartcard-windows.h"
+#endif
 #endif
 
 #define TAG FREERDP_TAG("core.nla")
