@@ -159,7 +159,7 @@ static int validateSmartCardUsage(PCCERT_CONTEXT pcontext, scquery_result identi
 		else
 		{
 			BOOL  status = CertGetEnhancedKeyUsage(pcontext, flags, pusage, &dusage);
-			DWORD errorcode = GetLastError(); // Could this in the if but wanted to ensure validity
+			DWORD errorcode = GetLastError(); // Could put this in the if but wanted to ensure validity
 			
 			if ((FALSE == status) && (CRYPT_E_NOT_FOUND != errorcode))
 			{
@@ -182,7 +182,9 @@ static int validateSmartCardUsage(PCCERT_CONTEXT pcontext, scquery_result identi
 				LPSTR *string = pusage->rgpszUsageIdentifier;
 				int    foundCount = 0;
 				
-				// At a minimu we're currently looking for 2:
+        // I don't like this type of coding - should be against some control struct
+        // predefined but no time to spend at this time...MAL-210129
+				// At a minimum we're currently looking for 2:
 				// SMART_CARD_LOGON_OID
 				// CLIENT_AUTHENTICATION_OID
 				// - otherwise fail...
@@ -192,17 +194,17 @@ static int validateSmartCardUsage(PCCERT_CONTEXT pcontext, scquery_result identi
 					
 					if ((SMART_CARD_LOGON_OID_LENGTH == length) && (0 == strncmp(SMART_CARD_LOGON_OID, string[index], SMART_CARD_LOGON_OID_LENGTH)))
 					{
-						WLog_INFO(TAG, "SMART_CARD_LOGON_OID enhanced key usage: %d -> %s\n", length, string[index]);
+						WLog_DBG(TAG, "SMART_CARD_LOGON_OID enhanced key usage: %d -> %s\n", length, string[index]);
 						foundCount++;
 					}
 					else if ((CLIENT_AUTHENTICATION_OID_LENGTH == length) && (0 == strncmp(CLIENT_AUTHENTICATION_OID, string[index], CLIENT_AUTHENTICATION_OID_LENGTH)))
 					{
-						WLog_INFO(TAG, "CLIENT_AUTHENTICATION_OID enhanced key usage: %d -> %s\n", length, string[index]);
+						WLog_DBG(TAG, "CLIENT_AUTHENTICATION_OID enhanced key usage: %d -> %s\n", length, string[index]);
 						foundCount++;
 					}
 					else if ((SECURE_EMAIL_OID_LENGTH == length) && (0 == strncmp(SECURE_EMAIL_OID, string[index], SECURE_EMAIL_OID_LENGTH)))
 					{
-						WLog_INFO(TAG, "SECURE_EMAIL_OID enhanced key usage: %d -> %s\n", length, string[index]);
+						WLog_DBG(TAG, "SECURE_EMAIL_OID enhanced key usage: %d -> %s\n", length, string[index]);
 					}
 					else
 					{
@@ -424,7 +426,6 @@ static int getCryptoCredentialForKeyName(LPWSTR keyname, LPWSTR *credential)
 
 static DWORD getSmartCardReaders(LPWSTR *pReaderNames[])
 {
-	HRESULT           hr = S_OK;
 	LPTSTR            szReaders = NULL;
 	LPTSTR            szRdr = NULL;
 	DWORD             cchReaders = SCARD_AUTOALLOCATE;
@@ -622,7 +623,6 @@ scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 	scquery_result  identityPtr = NULL;
 	LPWSTR         *pReaderNames = NULL;
 	DWORD           readerCount = 0;
-	SECURITY_STATUS localstatus = ERROR_SUCCESS;
 	
 	// Obtain the FIRST reader name...
 	readerCount = getSmartCardReaders(&pReaderNames);
@@ -652,7 +652,6 @@ scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 				NCryptKeyName     *ppKeyName = NULL;
 				PVOID              ppEnumState = NULL;
 				DWORD              idxcount = 0;
-				scquery_result_t   localIdentity;
 				LPWSTR             readerName = pReaderNames[index];
 				
 				// Create the windows reader name string to scope the results...
