@@ -777,7 +777,7 @@ scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 											}
 											else
 											{
-                        const size_t namesize = wcslen(namestring);
+												const size_t namesize = wcslen(namestring);
 												identityPtr->X509_user_identity = calloc(namesize+1, sizeof(char));
 												memset(identityPtr->X509_user_identity, 0, namesize+1);
 												wcstombs(identityPtr->X509_user_identity, namestring, namesize);
