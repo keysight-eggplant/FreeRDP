@@ -122,7 +122,7 @@ static int validateSmartCardUsername(const char *UPN, const char *Username, bool
 		
 		if (NULL == resultptr)
 		{
-			WLog_ERR(TAG, "username mismatch: %s vs. %s\n", Username, UPN);
+			WLog_DBG(TAG, "username mismatch: %s vs. %s\n", Username, UPN);
 			// No occurrance of requested partial username....
 			return -1;
 		}
@@ -138,7 +138,7 @@ static int validateSmartCardUsage(PCCERT_CONTEXT pcontext, scquery_result identi
 	
 	// Request data buffer size needed...
 	CertGetEnhancedKeyUsage(pcontext, flags, NULL, &dusage);
-	WLog_INFO(TAG, "Certificate enhanced key usage - allocating size: %d\n", dusage);
+	WLog_DBG(TAG, "Certificate enhanced key usage - allocating size: %d\n", dusage);
 	
 	if (0 == dusage)
 	{
@@ -777,11 +777,11 @@ scquery_result getUserIdentityFromSmartcard(rdpSettings *settings)
 											}
 											else
 											{
-												identityPtr->X509_user_identity = calloc(wcslen(namestring)+1, sizeof(char));
-												memset(identityPtr->X509_user_identity, 0, wcslen(namestring)+1);
-												wcstombs(identityPtr->X509_user_identity, namestring, wcslen(namestring));
-												WLog_INFO(TAG, "X500 name: %ld string: %s\n",
-																	identityPtr->X509_user_identity, namestring);
+                        const size_t namesize = wcslen(namestring);
+												identityPtr->X509_user_identity = calloc(namesize+1, sizeof(char));
+												memset(identityPtr->X509_user_identity, 0, namesize+1);
+												wcstombs(identityPtr->X509_user_identity, namestring, namesize);
+												WLog_DBG(TAG, "X500 name: %ld string: %s\n", namesize, identityPtr->X509_user_identity);
 												
 												{
 													static const char *CommonNamePrefix       = "CN=";
