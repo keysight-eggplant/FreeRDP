@@ -34,6 +34,8 @@
 
 #include "transport.h"
 
+#include <openssl/err.h>
+
 #define TAG FREERDP_TAG("core.nego")
 
 #if 0 // TESTPLANT-MAL-07072020: Moved to header file...
@@ -265,6 +267,10 @@ BOOL nego_security_connect(rdpNego* nego)
 			         "cannot connect security layer because no protocol has been selected yet.");
 		}
 	}
+    
+    if (!nego->SecurityConnected) {
+        ERR_print_errors_fp(stderr);
+    }
 
 	return nego->SecurityConnected;
 }
