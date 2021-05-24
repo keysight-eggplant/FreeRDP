@@ -405,8 +405,7 @@ static long bio_rdp_tls_ctrl(BIO* bio, int cmd, long num, void* ptr)
 
 			if (status <= 0)
 			{
-                int error = SSL_get_error(tls->ssl, status);
-				switch (error)
+				switch (SSL_get_error(tls->ssl, status))
 				{
 					case SSL_ERROR_WANT_READ:
 						BIO_set_flags(bio, BIO_FLAGS_READ | BIO_FLAGS_SHOULD_RETRY);
@@ -422,7 +421,6 @@ static long bio_rdp_tls_ctrl(BIO* bio, int cmd, long num, void* ptr)
 						break;
 
 					default:
-                        WLog_DBG(TAG, "SSL connect state machine error: %d", error);
 						BIO_clear_flags(bio, BIO_FLAGS_SHOULD_RETRY);
 						break;
 				}
@@ -718,10 +716,8 @@ static int tls_do_handshake(rdpTls* tls, BOOL clientMode)
 		if (status == 1)
 			break;
 
-        if (!BIO_should_retry(tls->bio)) {
-            WLog_DBG(TAG, "Failed Bio_do_handshake");
-            return -1;
-        }
+		if (!BIO_should_retry(tls->bio))
+			return -1;
 
 #ifndef _WIN32
 		/* we select() only for read even if we should test both read and write
