@@ -269,6 +269,7 @@ BOOL nego_security_connect(rdpNego* nego)
 	}
     
     if (!nego->SecurityConnected) {
+	WLog_DBG(TAG, "printing OpenSSL errrors");
         ERR_print_errors_fp(stderr);
     }
 
