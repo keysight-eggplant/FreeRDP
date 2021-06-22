@@ -165,13 +165,11 @@ static int validateSmartCardUsage(PCCERT_CONTEXT pcontext, scquery_result identi
 			{
 				WLog_ERR(TAG, "CertGetEnhancedKeyUsage error getting enhanced key usage data: %d (0x%0X)\n", GetLastError(), GetLastError());
 				identityPtr = NULL;
-				free(pusage);
 			}
 			else if ((0 == pusage->cUsageIdentifier) && (CRYPT_E_NOT_FOUND != errorcode))
 			{
 				WLog_ERR(TAG, "CertGetEnhancedKeyUsage(pusage->cUsageIdentifier == 0) error: %d (0x%0X)\n", GetLastError(), GetLastError());
 				identityPtr = NULL;
-				free(pusage);
 			}
 			else if (0 == pusage->cUsageIdentifier) // AND (CRYPT_E_NOT_FOUND != errorcode) is aassumed from above...
 			{
@@ -217,13 +215,14 @@ static int validateSmartCardUsage(PCCERT_CONTEXT pcontext, scquery_result identi
 				{
 					WLog_ERR(TAG, "CertGetEnhancedKeyUsage(Authentication/Smart Card Logon certificate not found)\n");
 					identityPtr = NULL;
-					free(pusage);
 				}
 			}
 		}
 		
 		// Cleanup...
-		free(pusage);
+		if (pusage != NULL) {
+			free(pusage);
+		}
 	}
 	
 	return ((NULL == identityPtr) ? -1 : 0);
