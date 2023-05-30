@@ -149,9 +149,12 @@ static BOOL CALLBACK WLog_InitializeRoot(PINIT_ONCE InitOnce, PVOID Parameter, P
 	if (!WLog_SetLogAppenderType(g_RootLog, logAppenderType))
 		goto fail;
 
+	if (!WLog_ParseFilters(g_RootLog))
+		goto fail;
+
 #if defined(_WIN32)
 	atexit(WLog_Uninit_);
-#endif
+
 	return TRUE;
 fail:
 	free(g_RootLog);
