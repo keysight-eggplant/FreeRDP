@@ -1,0 +1,47 @@
+name: FreeRDP CI
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  ubuntu:
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: ubuntu-22.04
+            image: ubuntu:22.04
+            family: ubuntu
+          - name: ubuntu-24.04
+            image: ubuntu:24.04
+            family: ubuntu
+          - name: rockylinux-9
+            image: rockylinux:9
+            family: rhel
+            repos: crb
+          - name: rockylinux-8
+            image: rockylinux:8
+            family: rhel
+            repos: powertools
+    steps:
+      - name: Install dependencies (Ubuntu)
+        run: |
+          apt-get update
+          apt-get install -y clang cmake libssl-dev zlib1g-dev
+        if: matrix.family == 'ubuntu'
+      - name: Install dependencies (Enterprise Linux)
+        run: |
+          yum install -y clang cmake openssl-devel zlib-devel
+        if: matrix.family == 'rhel'
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build
+        run: |
+          mkdir build
+          cd build
+          cmake ..
+          cmake --build . -j$(nproc)
