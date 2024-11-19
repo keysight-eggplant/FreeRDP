@@ -213,7 +213,7 @@ typedef SecPkgInfoW* PSecPkgInfoW;
 
 #else // ndef win32
 
-#if defined(__MINGW32__)
+#ifndef _WINERROR_
 #define SEC_E_INVALID_PARAMETER			0x8009035D
 #define SEC_E_DELEGATION_POLICY			0x8009035E
 #define SEC_E_POLICY_NLTM_ONLY			0x8009035F
@@ -486,17 +486,6 @@ typedef SecPkgCredentials_NamesW* PSecPkgCredentials_NamesW;
 #else
 #define SecPkgCredentials_Names SecPkgCredentials_NamesA
 #define PSecPkgCredentials_Names PSecPkgCredentials_NamesA
-#endif
-
-#else //ndef win32
-
-#if defined(__MINGW32__)
-struct _SecPkgContext_Bindings
-{
-	UINT32 BindingsLength;
-	SEC_CHANNEL_BINDINGS* Bindings;
-};
-typedef struct _SecPkgContext_Bindings SecPkgContext_Bindings;
 #endif
 
 #endif

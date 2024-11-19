@@ -211,6 +211,16 @@ extern "C"
 #define SetThreadpoolThreadMinimum winpr_SetThreadpoolThreadMinimum
 #define SetThreadpoolThreadMaximum winpr_SetThreadpoolThreadMaximum
 
+#if !defined(_WIN32)
+#define WINPR_CALLBACK_ENVIRON 1
+#elif defined(_WIN32) && (_WIN32_WINNT < 0x0600)
+#define WINPR_CALLBACK_ENVIRON 1
+#elif defined(__MINGW32__) && (__MINGW64_VERSION_MAJOR < 9)
+#define WINPR_CALLBACK_ENVIRON 1
+#endif
+
+#ifdef WINPR_CALLBACK_ENVIRON
+	/* some version of mingw are missing Callback Environment functions */
 	/* Callback Environment */
 
 	static INLINE VOID InitializeThreadpoolEnvironment(PTP_CALLBACK_ENVIRON pcbe)
@@ -244,6 +254,7 @@ extern "C"
 	{
 		pcbe->RaceDll = mod;
 	}
+#endif
 
 	/* Callback */
 

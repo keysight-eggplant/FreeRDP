@@ -1218,7 +1218,7 @@ struct rdp_settings
 	/* Kerberos Authentication */
 	ALIGN64 char* KerberosKdc;   /* 1344 */
   ALIGN64 char* KerberosRealm; /* 1345 */
-  ALIGN64 char* CrossDomainLogin; /* 1346 */
+  ALIGN64 BOOL CrossDomainLogin; /* 1346 */
 	UINT64 padding1408[1408 - 1347]; /* 1347 */
 
 	/* Server Certificate */

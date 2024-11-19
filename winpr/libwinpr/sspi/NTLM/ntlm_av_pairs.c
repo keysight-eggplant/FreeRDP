@@ -75,8 +75,8 @@ static const char* get_av_pair_string(UINT16 pair)
 			return "MsvAvSingleHost";
 		case MsvAvTargetName:
 			return "MsvAvTargetName";
-		case MsvChannelBindings:
-			return "MsvChannelBindings";
+		case MsvAvChannelBindings:
+			return "MsvAvChannelBindings";
 		default:
 			return "UNKNOWN";
 	}
@@ -721,7 +721,7 @@ int ntlm_construct_authenticate_target_info(NTLM_CONTEXT* context)
 
 	if (!context->SuppressExtendedProtection)
 	{
-		if (!ntlm_av_pair_add(AuthenticateTargetInfo, cbAuthenticateTargetInfo, MsvChannelBindings,
+		if (!ntlm_av_pair_add(AuthenticateTargetInfo, cbAuthenticateTargetInfo, MsvAvChannelBindings,
 		                      context->ChannelBindingsHash, 16))
 			goto fail;
 
