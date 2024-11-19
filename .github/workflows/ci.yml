@@ -45,3 +45,45 @@ jobs:
           cd build
           cmake ..
           cmake --build . -j$(nproc)
+
+  windows:
+    runs-on: windows-2022
+    env:
+      CC: clang
+      CXX: clang++
+    
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          install: >
+            git
+            make
+            man2html
+            mingw-w64-ucrt-x86_64-autotools
+            mingw-w64-ucrt-x86_64-clang
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-glib2
+
+      - name: Build pkcs11-helper
+        run: |
+          git clone https://github.com/OpenSC/pkcs11-helper/
+          cd pkcs11-helper
+          autoreconf -ivf
+          ./configure
+          make install
+
+      - name: Build
+        run: |
+          mkdir build
+          cd build
+          cmake ..
+          cmake --build .
