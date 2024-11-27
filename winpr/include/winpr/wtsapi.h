@@ -1326,7 +1326,7 @@ typedef BOOL(WINAPI* WTS_VIRTUAL_CHANNEL_READ_FN)(HANDLE hChannelHandle, ULONG T
                                                   LPVOID Buffer, ULONG BufferSize,
                                                   PULONG pBytesRead);
 
-typedef BOOL(WINAPI* WTS_VIRTUAL_CHANNEL_WRITE_FN)(HANDLE hChannelHandle, PCHAR Buffer,
+typedef BOOL(WINAPI* WTS_VIRTUAL_CHANNEL_WRITE_FN)(HANDLE hChannelHandle, LPVOID Buffer,
                                                    ULONG Length, PULONG pBytesWritten);
 
 typedef BOOL(WINAPI* WTS_VIRTUAL_CHANNEL_PURGE_INPUT_FN)(HANDLE hChannelHandle);
