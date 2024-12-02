@@ -85,7 +85,7 @@ BOOL ntlm_client_init(rdpNtlm* ntlm, BOOL http, LPCTSTR user, LPCTSTR domain, LP
 	if (!ntlm->table)
 		return FALSE;
 
-	sspi_SetAuthIdentity(&(ntlm->identity), user, domain, password);
+	sspi_SetAuthIdentity(&(ntlm->identity), (const char *)user, (const char *)domain, (const char *)password);
 	status = ntlm->table->QuerySecurityPackageInfo(NTLM_SSP_NAME, &ntlm->pPackageInfo);
 
 	if (status != SEC_E_OK)
@@ -141,7 +141,7 @@ BOOL ntlm_client_make_spn(rdpNtlm* ntlm, LPCTSTR ServiceClass, LPCTSTR hostname)
 	DWORD SpnLength = 0;
 	LPTSTR hostnameX = NULL;
 #ifdef UNICODE
-	ConvertToUnicode(CP_UTF8, 0, hostname, -1, (LPWSTR*)&hostnameX, 0);
+	ConvertToUnicode(CP_UTF8, 0, (LPCSTR)hostname, -1, (LPWSTR*)&hostnameX, 0);
 #else
 	hostnameX = _strdup(hostname);
 #endif
