@@ -195,13 +195,13 @@ BOOL rpc_ncacn_http_ntlm_init(rdpContext* context, RpcChannel* channel)
 		}
 	}
 
-	if (!ntlm_client_init(ntlm, TRUE, settings->GatewayUsername, settings->GatewayDomain,
-	                      settings->GatewayPassword, tls->Bindings))
+	if (!ntlm_client_init(ntlm, TRUE, (LPCTSTR)settings->GatewayUsername, (LPCTSTR)settings->GatewayDomain,
+	                      (LPCTSTR)settings->GatewayPassword, tls->Bindings))
 	{
 		return TRUE;
 	}
 
-	if (!ntlm_client_make_spn(ntlm, _T("HTTP"), settings->GatewayHostname))
+	if (!ntlm_client_make_spn(ntlm, _T("HTTP"), (LPCTSTR)settings->GatewayHostname))
 	{
 		return TRUE;
 	}
