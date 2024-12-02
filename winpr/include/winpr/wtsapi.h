@@ -1323,10 +1323,10 @@ typedef HANDLE(WINAPI* WTS_VIRTUAL_CHANNEL_OPEN_EX_FN)(DWORD SessionId, LPSTR pV
 typedef BOOL(WINAPI* WTS_VIRTUAL_CHANNEL_CLOSE_FN)(HANDLE hChannelHandle);
 
 typedef BOOL(WINAPI* WTS_VIRTUAL_CHANNEL_READ_FN)(HANDLE hChannelHandle, ULONG TimeOut,
-                                                  LPVOID Buffer, ULONG BufferSize,
+                                                  PCHAR Buffer, ULONG BufferSize,
                                                   PULONG pBytesRead);
 
-typedef BOOL(WINAPI* WTS_VIRTUAL_CHANNEL_WRITE_FN)(HANDLE hChannelHandle, LPCVOID Buffer,
+typedef BOOL(WINAPI* WTS_VIRTUAL_CHANNEL_WRITE_FN)(HANDLE hChannelHandle, PCHAR Buffer,
                                                    ULONG Length, PULONG pBytesWritten);
 
 typedef BOOL(WINAPI* WTS_VIRTUAL_CHANNEL_PURGE_INPUT_FN)(HANDLE hChannelHandle);
