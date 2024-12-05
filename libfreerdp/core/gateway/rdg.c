@@ -935,11 +935,11 @@ static BOOL rdg_ntlm_init(rdpRdg* rdg, rdpTls* tls)
 	if (!rdg_get_gateway_credentials(context))
 		return FALSE;
 
-	if (!ntlm_client_init(rdg->ntlm, TRUE, settings->GatewayUsername, settings->GatewayDomain,
-	                      settings->GatewayPassword, tls->Bindings))
+	if (!ntlm_client_init(rdg->ntlm, TRUE, (LPCTSTR)settings->GatewayUsername, (LPCTSTR)settings->GatewayDomain,
+	                      (LPCTSTR)settings->GatewayPassword, tls->Bindings))
 		return FALSE;
 
-	if (!ntlm_client_make_spn(rdg->ntlm, _T("HTTP"), settings->GatewayHostname))
+	if (!ntlm_client_make_spn(rdg->ntlm, _T("HTTP"), (LPCTSTR)settings->GatewayHostname))
 		return FALSE;
 
 	if (!ntlm_authenticate(rdg->ntlm, &continueNeeded))

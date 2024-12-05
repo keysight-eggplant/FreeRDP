@@ -335,6 +335,12 @@ if(${CMAKE_C_COMPILER_ID} STREQUAL "Clang")
 	if(Wno-deprecated-declarations)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-deprecated-declarations")
 	endif()
+	# Equivalent to https://github.com/msys2/MINGW-packages/blob/master/mingw-w64-freerdp/PKGBUILD#L49 and
+	# https://github.com/FreeRDP/FreeRDP/blob/master/docs/mingw-example/Dockerfile#L156
+	CHECK_C_COMPILER_FLAG(-Wno-incompatible-function-pointer-types Wno-incompatible-function-pointer-types)
+	if(Wno-incompatible-function-pointer-types)
+		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-incompatible-function-pointer-types")
+	endif()
 	CHECK_CXX_COMPILER_FLAG(-Wno-deprecated-declarations Wno-deprecated-declarationsCXX)
 	if(Wno-deprecated-declarationsCXX)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations")

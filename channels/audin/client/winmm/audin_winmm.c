@@ -86,7 +86,7 @@ static void CALLBACK waveInProc(HWAVEIN hWaveIn, UINT uMsg, DWORD_PTR dwInstance
 					format.wBitsPerSample = winmm->pwfx_cur->wBitsPerSample;
 					format.wFormatTag = winmm->pwfx_cur->wFormatTag;
 
-					if ((error = winmm->receive(&format, pWaveHdr->lpData,
+					if ((error = winmm->receive(&format, (const BYTE *)pWaveHdr->lpData,
 					                            pWaveHdr->dwBytesRecorded, winmm->user_data)))
 						break;
 

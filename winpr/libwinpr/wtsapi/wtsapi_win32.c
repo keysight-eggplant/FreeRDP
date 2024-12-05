@@ -570,7 +570,7 @@ BOOL WINAPI Win32_WTSVirtualChannelRead_Dynamic(WTSAPI_CHANNEL* pChannel, DWORD 
 	return FALSE;
 }
 
-BOOL WINAPI Win32_WTSVirtualChannelRead(HANDLE hChannel, DWORD dwMilliseconds, LPVOID lpBuffer,
+BOOL WINAPI Win32_WTSVirtualChannelRead(HANDLE hChannel, DWORD dwMilliseconds, PCHAR lpBuffer,
                                         DWORD nNumberOfBytesToRead,
                                         LPDWORD lpNumberOfBytesTransferred)
 {
@@ -588,7 +588,7 @@ BOOL WINAPI Win32_WTSVirtualChannelRead(HANDLE hChannel, DWORD dwMilliseconds, L
 	
 		ZeroMemory(&overlapped, sizeof(OVERLAPPED));
 
-		if (ReadFile(pChannel->hFile, lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesTransferred,
+		if (ReadFile(pChannel->hFile, (LPVOID)lpBuffer, nNumberOfBytesToRead, lpNumberOfBytesTransferred,
 		             &overlapped))
 			return TRUE;
 
@@ -615,13 +615,13 @@ BOOL WINAPI Win32_WTSVirtualChannelRead(HANDLE hChannel, DWORD dwMilliseconds, L
 	{
 		if (pChannel->dynamic)
 		{
-			return Win32_WTSVirtualChannelRead_Dynamic(pChannel, dwMilliseconds, lpBuffer,
+			return Win32_WTSVirtualChannelRead_Dynamic(pChannel, dwMilliseconds, (LPVOID)lpBuffer,
 			                                           nNumberOfBytesToRead,
 			                                           lpNumberOfBytesTransferred);
 		}
 		else
 		{
-			return Win32_WTSVirtualChannelRead_Static(pChannel, dwMilliseconds, lpBuffer,
+			return Win32_WTSVirtualChannelRead_Static(pChannel, dwMilliseconds, (LPVOID)lpBuffer,
 			                                          nNumberOfBytesToRead,
 			                                          lpNumberOfBytesTransferred);
 		}
@@ -630,7 +630,7 @@ BOOL WINAPI Win32_WTSVirtualChannelRead(HANDLE hChannel, DWORD dwMilliseconds, L
 	return FALSE;
 }
 
-BOOL WINAPI Win32_WTSVirtualChannelWrite(HANDLE hChannel, LPCVOID lpBuffer,
+BOOL WINAPI Win32_WTSVirtualChannelWrite(HANDLE hChannel, PCHAR lpBuffer,
                                          DWORD nNumberOfBytesToWrite,
                                          LPDWORD lpNumberOfBytesTransferred)
 {
@@ -645,7 +645,7 @@ BOOL WINAPI Win32_WTSVirtualChannelWrite(HANDLE hChannel, LPCVOID lpBuffer,
 
 	ZeroMemory(&overlapped, sizeof(OVERLAPPED));
 
-	if (WriteFile(pChannel->hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesTransferred,
+	if (WriteFile(pChannel->hFile, (LPCVOID)lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesTransferred,
 	              &overlapped))
 		return TRUE;
 

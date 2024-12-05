@@ -241,11 +241,11 @@ static BOOL saveCal(rdpSettings *settings, const BYTE *data, int length, char *h
 
 	if (written != 1)
 	{
-		DeleteFile(filepathNew);
+		DeleteFile(((const short unsigned int *)filepathNew));
 		goto out;
 	}
 
-	ret = MoveFileEx(filepathNew, filepath, MOVEFILE_REPLACE_EXISTING);
+	ret = MoveFileEx(((const short unsigned int *)filepathNew), (const short unsigned int *)filepath, MOVEFILE_REPLACE_EXISTING);
 
 out:
 	free(filepathNew);
