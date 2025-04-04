@@ -20,7 +20,6 @@
 #include "config.h"
 #endif
 
-#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,8 +29,6 @@
 
 void string_list_free(char** string_list)
 {
-	if(string_list != NULL)
-	{
 	int i;
 
 	for (i = 0; string_list[i]; i++)
@@ -41,9 +38,8 @@ void string_list_free(char** string_list)
 
 	free(string_list);
 }
-}
 
-int string_list_length(char** string_list)
+int string_list_length(const char* const* string_list)
 {
 	int i;
 
@@ -59,9 +55,9 @@ char** string_list_copy(const char* const* string_list)
 	int length = string_list_length(string_list);
 	char** copy = calloc(length + 1, sizeof(char*));
 
-	if (copy == NULL)
+	if (!copy)
 	{
-		return NULL;
+		return 0;
 	}
 
 	for (i = 0; i < length; i++)
@@ -69,17 +65,11 @@ char** string_list_copy(const char* const* string_list)
 		copy[i] = _strdup(string_list[i]);
 	}
 
-	copy[length] = NULL;
+	copy[length] = 0;
 	return copy;
 }
 
-void string_list_print(FILE* out, char** string_list)
-{
-	if (string_list == NULL)
-	{
-		fprintf(out, "NULL\n");
-	}
-	else
+void string_list_print(FILE* out, const char* const* string_list)
 {
 	int j;
 
@@ -87,6 +77,6 @@ void string_list_print(FILE* out, char** string_list)
 	{
 		fprintf(out, "[%2d]: %s\n", j, string_list[j]);
 	}
-	}
+
 	fflush(out);
 }
