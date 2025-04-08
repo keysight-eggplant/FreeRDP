@@ -52,9 +52,8 @@ static PWtsApiFunctionTable g_WtsApi = NULL;
 static HMODULE g_WtsApi32Module = NULL;
 static WtsApiFunctionTable WtsApi32_WtsApiFunctionTable = { 0 };
 
-#define WTSAPI32_LOAD_PROC(_name, _type)                                                   \
-	WtsApi32_WtsApiFunctionTable.p##_name = (##_type)GetProcAddress(g_WtsApi32Module, "WT" \
-	                                                                                  "S" #_name);
+#define WTSAPI32_LOAD_PROC(_name, _type) \
+	WtsApi32_WtsApiFunctionTable.p ## _name = (_type) GetProcAddress(g_WtsApi32Module, "WTS" #_name);
 
 static BOOL WtsApi32_InitializeWtsApi(void)
 {
@@ -137,26 +136,26 @@ static BOOL WtsApi32_InitializeWtsApi(void)
 
 /* WtsApi Functions */
 
-static BOOL CALLBACK InitializeWtsApiStubs(PINIT_ONCE once, PVOID param, PVOID* context);
+static BOOL CALLBACK InitializeWtsApiStubs(PINIT_ONCE once, PVOID param, PVOID *context);
 static INIT_ONCE wtsapiInitOnce = INIT_ONCE_STATIC_INIT;
 
-#define WTSAPI_STUB_CALL_VOID(_name, ...)                                    \
+#define WTSAPI_STUB_CALL_VOID(_name, ...) \
 	InitOnceExecuteOnce(&wtsapiInitOnce, InitializeWtsApiStubs, NULL, NULL); \
-	if (!g_WtsApi || !g_WtsApi->p##_name)                                    \
-		return;                                                              \
-	g_WtsApi->p##_name(__VA_ARGS__)
+	if (!g_WtsApi || !g_WtsApi->p ## _name) \
+		return; \
+	g_WtsApi->p ## _name ( __VA_ARGS__ )
 
-#define WTSAPI_STUB_CALL_BOOL(_name, ...)                                    \
+#define WTSAPI_STUB_CALL_BOOL(_name, ...) \
 	InitOnceExecuteOnce(&wtsapiInitOnce, InitializeWtsApiStubs, NULL, NULL); \
-	if (!g_WtsApi || !g_WtsApi->p##_name)                                    \
-		return FALSE;                                                        \
-	return g_WtsApi->p##_name(__VA_ARGS__)
+	if (!g_WtsApi || !g_WtsApi->p ## _name) \
+		return FALSE; \
+	return g_WtsApi->p ## _name ( __VA_ARGS__ )
 
-#define WTSAPI_STUB_CALL_HANDLE(_name, ...)                                  \
+#define WTSAPI_STUB_CALL_HANDLE(_name, ...) \
 	InitOnceExecuteOnce(&wtsapiInitOnce, InitializeWtsApiStubs, NULL, NULL); \
-	if (!g_WtsApi || !g_WtsApi->p##_name)                                    \
-		return NULL;                                                         \
-	return g_WtsApi->p##_name(__VA_ARGS__)
+	if (!g_WtsApi || !g_WtsApi->p ## _name) \
+		return NULL; \
+	return g_WtsApi->p ## _name ( __VA_ARGS__ )
 
 BOOL WINAPI WTSStartRemoteControlSessionW(LPWSTR pTargetServerName, ULONG TargetLogonId,
                                           BYTE HotkeyVk, USHORT HotkeyModifiers)
@@ -484,7 +483,7 @@ BOOL WINAPI WTSQueryListenerConfigA(HANDLE hServer, PVOID pReserved, DWORD Reser
 }
 
 BOOL WINAPI WTSCreateListenerW(HANDLE hServer, PVOID pReserved, DWORD Reserved,
-                               LPWSTR pListenerName, PWTSLISTENERCONFIGW pBuffer, DWORD flag)
+							   LPWSTR pListenerName, PWTSLISTENERCONFIGW pBuffer, DWORD flag)
 {
 	WTSAPI_STUB_CALL_BOOL(CreateListenerW, hServer, pReserved, Reserved, pListenerName, pBuffer,
 	                      flag);
@@ -498,37 +497,37 @@ BOOL WINAPI WTSCreateListenerA(HANDLE hServer, PVOID pReserved, DWORD Reserved, 
 }
 
 BOOL WINAPI WTSSetListenerSecurityW(HANDLE hServer, PVOID pReserved, DWORD Reserved,
-                                    LPWSTR pListenerName, SECURITY_INFORMATION SecurityInformation,
-                                    PSECURITY_DESCRIPTOR pSecurityDescriptor)
+									LPWSTR pListenerName, SECURITY_INFORMATION SecurityInformation,
+									PSECURITY_DESCRIPTOR pSecurityDescriptor)
 {
 	WTSAPI_STUB_CALL_BOOL(SetListenerSecurityW, hServer, pReserved, Reserved, pListenerName,
 	                      SecurityInformation, pSecurityDescriptor);
 }
 
 BOOL WINAPI WTSSetListenerSecurityA(HANDLE hServer, PVOID pReserved, DWORD Reserved,
-                                    LPSTR pListenerName, SECURITY_INFORMATION SecurityInformation,
-                                    PSECURITY_DESCRIPTOR pSecurityDescriptor)
+									LPSTR pListenerName, SECURITY_INFORMATION SecurityInformation,
+									PSECURITY_DESCRIPTOR pSecurityDescriptor)
 {
 	WTSAPI_STUB_CALL_BOOL(SetListenerSecurityA, hServer, pReserved, Reserved, pListenerName,
 	                      SecurityInformation, pSecurityDescriptor);
 }
 
 BOOL WINAPI WTSGetListenerSecurityW(HANDLE hServer, PVOID pReserved, DWORD Reserved,
-                                    LPWSTR pListenerName, SECURITY_INFORMATION SecurityInformation,
+									LPWSTR pListenerName, SECURITY_INFORMATION SecurityInformation,
                                     PSECURITY_DESCRIPTOR pSecurityDescriptor, DWORD nLength,
                                     LPDWORD lpnLengthNeeded)
 {
 	WTSAPI_STUB_CALL_BOOL(GetListenerSecurityW, hServer, pReserved, Reserved, pListenerName,
-	                      SecurityInformation, pSecurityDescriptor, nLength, lpnLengthNeeded);
+						  SecurityInformation, pSecurityDescriptor, nLength, lpnLengthNeeded);
 }
 
 BOOL WINAPI WTSGetListenerSecurityA(HANDLE hServer, PVOID pReserved, DWORD Reserved,
-                                    LPSTR pListenerName, SECURITY_INFORMATION SecurityInformation,
+									LPSTR pListenerName, SECURITY_INFORMATION SecurityInformation,
                                     PSECURITY_DESCRIPTOR pSecurityDescriptor, DWORD nLength,
                                     LPDWORD lpnLengthNeeded)
 {
 	WTSAPI_STUB_CALL_BOOL(GetListenerSecurityA, hServer, pReserved, Reserved, pListenerName,
-	                      SecurityInformation, pSecurityDescriptor, nLength, lpnLengthNeeded);
+						  SecurityInformation, pSecurityDescriptor, nLength, lpnLengthNeeded);
 }
 
 BOOL CDECL WTSEnableChildSessions(BOOL bEnable)
@@ -576,73 +575,73 @@ DWORD WINAPI WTSGetActiveConsoleSessionId(void)
 
 const CHAR* WTSErrorToString(UINT error)
 {
-	switch (error)
+	switch(error)
 	{
-		case CHANNEL_RC_OK:
-			return "CHANNEL_RC_OK";
+	case CHANNEL_RC_OK:
+		return "CHANNEL_RC_OK";
 
-		case CHANNEL_RC_ALREADY_INITIALIZED:
-			return "CHANNEL_RC_ALREADY_INITIALIZED";
+	case CHANNEL_RC_ALREADY_INITIALIZED:
+		return "CHANNEL_RC_ALREADY_INITIALIZED";
 
-		case CHANNEL_RC_NOT_INITIALIZED:
-			return "CHANNEL_RC_NOT_INITIALIZED";
+	case CHANNEL_RC_NOT_INITIALIZED:
+		return "CHANNEL_RC_NOT_INITIALIZED";
 
-		case CHANNEL_RC_ALREADY_CONNECTED:
-			return "CHANNEL_RC_ALREADY_CONNECTED";
+	case CHANNEL_RC_ALREADY_CONNECTED:
+		return "CHANNEL_RC_ALREADY_CONNECTED";
 
-		case CHANNEL_RC_NOT_CONNECTED:
-			return "CHANNEL_RC_NOT_CONNECTED";
+	case CHANNEL_RC_NOT_CONNECTED:
+		return "CHANNEL_RC_NOT_CONNECTED";
 
-		case CHANNEL_RC_TOO_MANY_CHANNELS:
-			return "CHANNEL_RC_TOO_MANY_CHANNELS";
+	case CHANNEL_RC_TOO_MANY_CHANNELS:
+		return "CHANNEL_RC_TOO_MANY_CHANNELS";
 
-		case CHANNEL_RC_BAD_CHANNEL:
-			return "CHANNEL_RC_BAD_CHANNEL";
+	case CHANNEL_RC_BAD_CHANNEL:
+		return "CHANNEL_RC_BAD_CHANNEL";
 
-		case CHANNEL_RC_BAD_CHANNEL_HANDLE:
-			return "CHANNEL_RC_BAD_CHANNEL_HANDLE";
+	case CHANNEL_RC_BAD_CHANNEL_HANDLE:
+		return "CHANNEL_RC_BAD_CHANNEL_HANDLE";
 
-		case CHANNEL_RC_NO_BUFFER:
-			return "CHANNEL_RC_NO_BUFFER";
+	case CHANNEL_RC_NO_BUFFER:
+		return "CHANNEL_RC_NO_BUFFER";
 
-		case CHANNEL_RC_BAD_INIT_HANDLE:
-			return "CHANNEL_RC_BAD_INIT_HANDLE";
+	case CHANNEL_RC_BAD_INIT_HANDLE:
+		return "CHANNEL_RC_BAD_INIT_HANDLE";
 
-		case CHANNEL_RC_NOT_OPEN:
-			return "CHANNEL_RC_NOT_OPEN";
+	case CHANNEL_RC_NOT_OPEN:
+		return "CHANNEL_RC_NOT_OPEN";
 
-		case CHANNEL_RC_BAD_PROC:
-			return "CHANNEL_RC_BAD_PROC";
+	case CHANNEL_RC_BAD_PROC:
+		return "CHANNEL_RC_BAD_PROC";
 
-		case CHANNEL_RC_NO_MEMORY:
-			return "CHANNEL_RC_NO_MEMORY";
+	case CHANNEL_RC_NO_MEMORY:
+		return "CHANNEL_RC_NO_MEMORY";
 
-		case CHANNEL_RC_UNKNOWN_CHANNEL_NAME:
-			return "CHANNEL_RC_UNKNOWN_CHANNEL_NAME";
+	case CHANNEL_RC_UNKNOWN_CHANNEL_NAME:
+		return "CHANNEL_RC_UNKNOWN_CHANNEL_NAME";
 
-		case CHANNEL_RC_ALREADY_OPEN:
-			return "CHANNEL_RC_ALREADY_OPEN";
+	case CHANNEL_RC_ALREADY_OPEN:
+		return "CHANNEL_RC_ALREADY_OPEN";
 
-		case CHANNEL_RC_NOT_IN_VIRTUALCHANNELENTRY:
-			return "CHANNEL_RC_NOT_IN_VIRTUALCHANNELENTRY";
+	case CHANNEL_RC_NOT_IN_VIRTUALCHANNELENTRY:
+		return "CHANNEL_RC_NOT_IN_VIRTUALCHANNELENTRY";
 
-		case CHANNEL_RC_NULL_DATA:
-			return "CHANNEL_RC_NULL_DATA";
+	case CHANNEL_RC_NULL_DATA:
+		return "CHANNEL_RC_NULL_DATA";
 
-		case CHANNEL_RC_ZERO_LENGTH:
-			return "CHANNEL_RC_ZERO_LENGTH";
+	case CHANNEL_RC_ZERO_LENGTH:
+		return "CHANNEL_RC_ZERO_LENGTH";
 
-		case CHANNEL_RC_INVALID_INSTANCE:
-			return "CHANNEL_RC_INVALID_INSTANCE";
+	case CHANNEL_RC_INVALID_INSTANCE:
+		return "CHANNEL_RC_INVALID_INSTANCE";
 
-		case CHANNEL_RC_UNSUPPORTED_VERSION:
-			return "CHANNEL_RC_UNSUPPORTED_VERSION";
+	case CHANNEL_RC_UNSUPPORTED_VERSION:
+		return "CHANNEL_RC_UNSUPPORTED_VERSION";
 
-		case CHANNEL_RC_INITIALIZATION_ERROR:
-			return "CHANNEL_RC_INITIALIZATION_ERROR";
+	case CHANNEL_RC_INITIALIZATION_ERROR:
+		return "CHANNEL_RC_INITIALIZATION_ERROR";
 
-		default:
-			return "UNKNOWN";
+	default:
+		return "UNKNOWN";
 	}
 }
 
@@ -650,26 +649,26 @@ const CHAR* WTSSessionStateToString(WTS_CONNECTSTATE_CLASS state)
 {
 	switch (state)
 	{
-		case WTSActive:
-			return "WTSActive";
-		case WTSConnected:
-			return "WTSConnected";
-		case WTSConnectQuery:
-			return "WTSConnectQuery";
-		case WTSShadow:
-			return "WTSShadow";
-		case WTSDisconnected:
-			return "WTSDisconnected";
-		case WTSIdle:
-			return "WTSIdle";
-		case WTSListen:
-			return "WTSListen";
-		case WTSReset:
-			return "WTSReset";
-		case WTSDown:
-			return "WTSDown";
-		case WTSInit:
-			return "WTSInit";
+	case WTSActive:
+		return "WTSActive";
+	case WTSConnected:
+		return "WTSConnected";
+	case WTSConnectQuery:
+		return "WTSConnectQuery";
+	case WTSShadow:
+		return "WTSShadow";
+	case WTSDisconnected:
+		return "WTSDisconnected";
+	case WTSIdle:
+		return "WTSIdle";
+	case WTSListen:
+		return "WTSListen";
+	case WTSReset:
+		return "WTSReset";
+	case WTSDown:
+		return "WTSDown";
+	case WTSInit:
+		return "WTSInit";
 	}
 	return "INVALID_STATE";
 }
@@ -693,7 +692,7 @@ static BOOL LoadAndInitialize(char* library)
 	if (!g_WtsApiModule)
 		return FALSE;
 
-	pInitWtsApi = (INIT_WTSAPI_FN)GetProcAddress(g_WtsApiModule, "InitWtsApi");
+	pInitWtsApi = (INIT_WTSAPI_FN) GetProcAddress(g_WtsApiModule, "InitWtsApi");
 
 	if (!pInitWtsApi)
 	{
@@ -707,7 +706,7 @@ static BOOL LoadAndInitialize(char* library)
 static void InitializeWtsApiStubs_Env()
 {
 	DWORD nSize;
-	char* env = NULL;
+	char *env = NULL;
 	LPCSTR wts = "WTSAPI_LIBRARY";
 
 	if (g_WtsApi)
@@ -718,7 +717,7 @@ static void InitializeWtsApiStubs_Env()
 	if (!nSize)
 		return;
 
-	env = (LPSTR)malloc(nSize);
+	env = (LPSTR) malloc(nSize);
 	if (env)
 	{
 		if (GetEnvironmentVariableA(wts, env, nSize) == nSize - 1)
@@ -771,7 +770,7 @@ static void InitializeWtsApiStubs_FreeRDS()
 	IniFile_Free(ini);
 }
 
-static BOOL CALLBACK InitializeWtsApiStubs(PINIT_ONCE once, PVOID param, PVOID* context)
+static BOOL CALLBACK InitializeWtsApiStubs(PINIT_ONCE once, PVOID param, PVOID *context)
 {
 	WINPR_UNUSED(once);
 	WINPR_UNUSED(context);

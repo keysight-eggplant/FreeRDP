@@ -28,72 +28,72 @@ extern "C"
 {
 #endif
 
-	/**
-	 * Client Entry Points
-	 */
+/**
+ * Client Entry Points
+ */
 
-	typedef BOOL (*pRdpGlobalInit)(void);
-	typedef void (*pRdpGlobalUninit)(void);
+typedef BOOL (*pRdpGlobalInit)(void);
+typedef void (*pRdpGlobalUninit)(void);
 
-	typedef BOOL (*pRdpClientNew)(freerdp* instance, rdpContext* context);
-	typedef void (*pRdpClientFree)(freerdp* instance, rdpContext* context);
+typedef BOOL (*pRdpClientNew)(freerdp* instance, rdpContext* context);
+typedef void (*pRdpClientFree)(freerdp* instance, rdpContext* context);
 
-	typedef int (*pRdpClientStart)(rdpContext* context);
-	typedef int (*pRdpClientStop)(rdpContext* context);
+typedef int (*pRdpClientStart)(rdpContext* context);
+typedef int (*pRdpClientStop)(rdpContext* context);
 
-	struct rdp_client_entry_points_v1
-	{
-		DWORD Size;
-		DWORD Version;
+struct rdp_client_entry_points_v1
+{
+	DWORD Size;
+	DWORD Version;
 
-		rdpSettings* settings;
+	rdpSettings* settings;
 
-		pRdpGlobalInit GlobalInit;
-		pRdpGlobalUninit GlobalUninit;
+	pRdpGlobalInit GlobalInit;
+	pRdpGlobalUninit GlobalUninit;
 
-		DWORD ContextSize;
-		pRdpClientNew ClientNew;
-		pRdpClientFree ClientFree;
+	DWORD ContextSize;
+	pRdpClientNew ClientNew;
+	pRdpClientFree ClientFree;
 
-		pRdpClientStart ClientStart;
-		pRdpClientStop ClientStop;
-	};
+	pRdpClientStart ClientStart;
+	pRdpClientStop ClientStop;
+};
 
-#define RDP_CLIENT_INTERFACE_VERSION 1
-#define RDP_CLIENT_ENTRY_POINT_NAME "RdpClientEntry"
+#define RDP_CLIENT_INTERFACE_VERSION	1
+#define RDP_CLIENT_ENTRY_POINT_NAME	"RdpClientEntry"
 
-	typedef int (*pRdpClientEntry)(RDP_CLIENT_ENTRY_POINTS* pEntryPoints);
+typedef int (*pRdpClientEntry)(RDP_CLIENT_ENTRY_POINTS* pEntryPoints);
 
-	/* Common Client Interface */
+/* Common Client Interface */
 
 #define DEFINE_RDP_CLIENT_COMMON() HANDLE thread
 
-	struct rdp_client_context
-	{
-		rdpContext context;
-		DEFINE_RDP_CLIENT_COMMON();
-	};
+struct rdp_client_context
+{
+	rdpContext context;
+	DEFINE_RDP_CLIENT_COMMON();
+};
 
-	/* Common client functions */
+/* Common client functions */
 
-	FREERDP_API rdpContext* freerdp_client_context_new(RDP_CLIENT_ENTRY_POINTS* pEntryPoints);
-	FREERDP_API void freerdp_client_context_free(rdpContext* context);
+FREERDP_API rdpContext* freerdp_client_context_new(RDP_CLIENT_ENTRY_POINTS* pEntryPoints);
+FREERDP_API void freerdp_client_context_free(rdpContext* context);
 
-	FREERDP_API int freerdp_client_start(rdpContext* context);
-	FREERDP_API int freerdp_client_stop(rdpContext* context);
+FREERDP_API int freerdp_client_start(rdpContext* context);
+FREERDP_API int freerdp_client_stop(rdpContext* context);
 
-	FREERDP_API freerdp* freerdp_client_get_instance(rdpContext* context);
-	FREERDP_API HANDLE freerdp_client_get_thread(rdpContext* context);
+FREERDP_API freerdp* freerdp_client_get_instance(rdpContext* context);
+FREERDP_API HANDLE freerdp_client_get_thread(rdpContext* context);
 
 	FREERDP_API int freerdp_client_settings_parse_command_line(rdpSettings* settings, int argc,
 	                                                           char** argv, BOOL allowUnknown);
 
-	FREERDP_API int freerdp_client_settings_parse_connection_file(rdpSettings* settings,
-	                                                              const char* filename);
-	FREERDP_API int freerdp_client_settings_parse_connection_file_buffer(rdpSettings* settings,
+FREERDP_API int freerdp_client_settings_parse_connection_file(rdpSettings* settings,
+        const char* filename);
+FREERDP_API int freerdp_client_settings_parse_connection_file_buffer(rdpSettings* settings,
 	                                                                     const BYTE* buffer,
 	                                                                     size_t size);
-	FREERDP_API int freerdp_client_settings_write_connection_file(const rdpSettings* settings,
+FREERDP_API int freerdp_client_settings_write_connection_file(const rdpSettings* settings,
 	                                                              const char* filename,
 	                                                              BOOL unicode);
 
@@ -111,7 +111,7 @@ extern "C"
 #endif
 	FREERDP_API DWORD client_cli_verify_certificate_ex(freerdp* instance, const char* host,
 	                                                   UINT16 port, const char* common_name,
-	                                                   const char* subject, const char* issuer,
+        const char* subject, const char* issuer,
 	                                                   const char* fingerprint, DWORD flags);
 #if !defined(DEFINE_NO_DEPRECATED)
 	FREERDP_API WINPR_DEPRECATED(DWORD client_cli_verify_changed_certificate(

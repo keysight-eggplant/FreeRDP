@@ -55,7 +55,7 @@ static UINT remdesk_virtual_channel_write(remdeskPlugin* remdesk, wStream* s)
 	if (status != CHANNEL_RC_OK)
 	{
 		Stream_Free(s, TRUE);
-		WLog_ERR(TAG, "pVirtualChannelWriteEx failed with %s [%08" PRIX32 "]",
+		WLog_ERR(TAG,  "pVirtualChannelWriteEx failed with %s [%08"PRIX32"]",
 		         WTSErrorToString(status), status);
 	}
 	return status;
@@ -102,7 +102,7 @@ static UINT remdesk_generate_expert_blob(remdeskPlugin* remdesk)
 	}
 
 	pass = freerdp_assistance_bin_to_hex_string(remdesk->EncryptedPassStub,
-	                                            remdesk->EncryptedPassStubSize);
+	        remdesk->EncryptedPassStubSize);
 
 	if (!pass)
 	{
@@ -139,7 +139,7 @@ static UINT remdesk_read_channel_header(wStream* s, REMDESK_CHANNEL_HEADER* head
 		return ERROR_INVALID_DATA;
 	}
 
-	Stream_Read_UINT32(s, ChannelNameLen);     /* ChannelNameLen (4 bytes) */
+	Stream_Read_UINT32(s, ChannelNameLen); /* ChannelNameLen (4 bytes) */
 	Stream_Read_UINT32(s, header->DataLength); /* DataLen (4 bytes) */
 
 	if (ChannelNameLen > 64)
@@ -161,7 +161,7 @@ static UINT remdesk_read_channel_header(wStream* s, REMDESK_CHANNEL_HEADER* head
 	}
 
 	ZeroMemory(header->ChannelName, sizeof(header->ChannelName));
-	pChannelName = (char*)header->ChannelName;
+	pChannelName = (char*) header->ChannelName;
 	status = ConvertFromUnicode(CP_UTF8, 0, (WCHAR*)Stream_Pointer(s), ChannelNameLen / 2,
 	                            &pChannelName, 32, NULL, NULL);
 	Stream_Seek(s, ChannelNameLen);
@@ -189,12 +189,12 @@ static UINT remdesk_write_channel_header(wStream* s, REMDESK_CHANNEL_HEADER* hea
 
 	for (index = 0; index < 32; index++)
 	{
-		ChannelNameW[index] = (WCHAR)header->ChannelName[index];
+		ChannelNameW[index] = (WCHAR) header->ChannelName[index];
 	}
 
 	ChannelNameLen = (strnlen(header->ChannelName, sizeof(header->ChannelName)) + 1) * 2;
-	Stream_Write_UINT32(s, ChannelNameLen);        /* ChannelNameLen (4 bytes) */
-	Stream_Write_UINT32(s, header->DataLength);    /* DataLen (4 bytes) */
+	Stream_Write_UINT32(s, ChannelNameLen); /* ChannelNameLen (4 bytes) */
+	Stream_Write_UINT32(s, header->DataLength); /* DataLen (4 bytes) */
 	Stream_Write(s, ChannelNameW, ChannelNameLen); /* ChannelName (variable) */
 	return CHANNEL_RC_OK;
 }
@@ -206,7 +206,7 @@ static UINT remdesk_write_channel_header(wStream* s, REMDESK_CHANNEL_HEADER* hea
  */
 static UINT remdesk_write_ctl_header(wStream* s, REMDESK_CTL_HEADER* ctlHeader)
 {
-	remdesk_write_channel_header(s, (REMDESK_CHANNEL_HEADER*)ctlHeader);
+	remdesk_write_channel_header(s, (REMDESK_CHANNEL_HEADER*) ctlHeader);
 	Stream_Write_UINT32(s, ctlHeader->msgType); /* msgType (4 bytes) */
 	return CHANNEL_RC_OK;
 }
@@ -275,7 +275,7 @@ static UINT remdesk_send_ctl_version_info_pdu(remdeskPlugin* remdesk)
 {
 	wStream* s;
 	REMDESK_CTL_VERSION_INFO_PDU pdu;
-	UINT error;
+	UINT  error;
 	remdesk_prepare_ctl_header(&(pdu.ctlHeader), REMDESK_CTL_VERSIONINFO, 8);
 	pdu.versionMajor = 1;
 	pdu.versionMinor = 2;
@@ -293,7 +293,7 @@ static UINT remdesk_send_ctl_version_info_pdu(remdeskPlugin* remdesk)
 	Stream_SealLength(s);
 
 	if ((error = remdesk_virtual_channel_write(remdesk, s)))
-		WLog_ERR(TAG, "remdesk_virtual_channel_write failed with error %" PRIu32 "!", error);
+		WLog_ERR(TAG, "remdesk_virtual_channel_write failed with error %"PRIu32"!", error);
 
 	return error;
 }
@@ -316,7 +316,7 @@ static UINT remdesk_recv_ctl_result_pdu(remdeskPlugin* remdesk, wStream* s,
 
 	Stream_Read_UINT32(s, result); /* result (4 bytes) */
 	*pResult = result;
-	// WLog_DBG(TAG, "RemdeskRecvResult: 0x%08"PRIX32"", result);
+	//WLog_DBG(TAG, "RemdeskRecvResult: 0x%08"PRIX32"", result);
 	return CHANNEL_RC_OK;
 }
 
@@ -338,7 +338,7 @@ static UINT remdesk_send_ctl_authenticate_pdu(remdeskPlugin* remdesk)
 
 	if ((error = remdesk_generate_expert_blob(remdesk)))
 	{
-		WLog_ERR(TAG, "remdesk_generate_expert_blob failed with error %" PRIu32 "", error);
+		WLog_ERR(TAG, "remdesk_generate_expert_blob failed with error %"PRIu32"", error);
 		return error;
 	}
 
@@ -375,12 +375,12 @@ static UINT remdesk_send_ctl_authenticate_pdu(remdeskPlugin* remdesk)
 	}
 
 	remdesk_write_ctl_header(s, &(pdu.ctlHeader));
-	Stream_Write(s, (BYTE*)raConnectionStringW, cbRaConnectionStringW);
-	Stream_Write(s, (BYTE*)expertBlobW, cbExpertBlobW);
+	Stream_Write(s, (BYTE*) raConnectionStringW, cbRaConnectionStringW);
+	Stream_Write(s, (BYTE*) expertBlobW, cbExpertBlobW);
 	Stream_SealLength(s);
 
 	if ((error = remdesk_virtual_channel_write(remdesk, s)))
-		WLog_ERR(TAG, "remdesk_virtual_channel_write failed with error %" PRIu32 "!", error);
+		WLog_ERR(TAG, "remdesk_virtual_channel_write failed with error %"PRIu32"!", error);
 
 out:
 	free(raConnectionStringW);
@@ -424,11 +424,11 @@ static UINT remdesk_send_ctl_remote_control_desktop_pdu(remdeskPlugin* remdesk)
 	}
 
 	remdesk_write_ctl_header(s, &(pdu.ctlHeader));
-	Stream_Write(s, (BYTE*)raConnectionStringW, cbRaConnectionStringW);
+	Stream_Write(s, (BYTE*) raConnectionStringW, cbRaConnectionStringW);
 	Stream_SealLength(s);
 
 	if ((error = remdesk_virtual_channel_write(remdesk, s)))
-		WLog_ERR(TAG, "remdesk_virtual_channel_write failed with error %" PRIu32 "!", error);
+		WLog_ERR(TAG, "remdesk_virtual_channel_write failed with error %"PRIu32"!", error);
 
 out:
 	free(raConnectionStringW);
@@ -452,7 +452,7 @@ static UINT remdesk_send_ctl_verify_password_pdu(remdeskPlugin* remdesk)
 
 	if ((error = remdesk_generate_expert_blob(remdesk)))
 	{
-		WLog_ERR(TAG, "remdesk_generate_expert_blob failed with error %" PRIu32 "!", error);
+		WLog_ERR(TAG, "remdesk_generate_expert_blob failed with error %"PRIu32"!", error);
 		return error;
 	}
 
@@ -477,11 +477,11 @@ static UINT remdesk_send_ctl_verify_password_pdu(remdeskPlugin* remdesk)
 	}
 
 	remdesk_write_ctl_header(s, &(pdu.ctlHeader));
-	Stream_Write(s, (BYTE*)expertBlobW, cbExpertBlobW);
+	Stream_Write(s, (BYTE*) expertBlobW, cbExpertBlobW);
 	Stream_SealLength(s);
 
 	if ((error = remdesk_virtual_channel_write(remdesk, s)))
-		WLog_ERR(TAG, "remdesk_virtual_channel_write failed with error %" PRIu32 "!", error);
+		WLog_ERR(TAG, "remdesk_virtual_channel_write failed with error %"PRIu32"!", error);
 
 out:
 	free(expertBlobW);
@@ -502,7 +502,7 @@ static UINT remdesk_send_ctl_expert_on_vista_pdu(remdeskPlugin* remdesk)
 
 	if ((error = remdesk_generate_expert_blob(remdesk)))
 	{
-		WLog_ERR(TAG, "remdesk_generate_expert_blob failed with error %" PRIu32 "!", error);
+		WLog_ERR(TAG, "remdesk_generate_expert_blob failed with error %"PRIu32"!", error);
 		return error;
 	}
 
@@ -543,7 +543,7 @@ static UINT remdesk_recv_ctl_pdu(remdeskPlugin* remdesk, wStream* s, REMDESK_CHA
 
 	Stream_Read_UINT32(s, msgType); /* msgType (4 bytes) */
 
-	// WLog_DBG(TAG, "msgType: %"PRIu32"", msgType);
+	//WLog_DBG(TAG, "msgType: %"PRIu32"", msgType);
 
 	switch (msgType)
 	{
@@ -552,7 +552,7 @@ static UINT remdesk_recv_ctl_pdu(remdeskPlugin* remdesk, wStream* s, REMDESK_CHA
 
 		case REMDESK_CTL_RESULT:
 			if ((error = remdesk_recv_ctl_result_pdu(remdesk, s, header, &result)))
-				WLog_ERR(TAG, "remdesk_recv_ctl_result_pdu failed with error %" PRIu32 "", error);
+				WLog_ERR(TAG, "remdesk_recv_ctl_result_pdu failed with error %"PRIu32"", error);
 
 			break;
 
@@ -561,7 +561,7 @@ static UINT remdesk_recv_ctl_pdu(remdeskPlugin* remdesk, wStream* s, REMDESK_CHA
 
 		case REMDESK_CTL_SERVER_ANNOUNCE:
 			if ((error = remdesk_recv_ctl_server_announce_pdu(remdesk, s, header)))
-				WLog_ERR(TAG, "remdesk_recv_ctl_server_announce_pdu failed with error %" PRIu32 "",
+				WLog_ERR(TAG, "remdesk_recv_ctl_server_announce_pdu failed with error %"PRIu32"",
 				         error);
 
 			break;
@@ -642,7 +642,7 @@ static UINT remdesk_recv_ctl_pdu(remdeskPlugin* remdesk, wStream* s, REMDESK_CHA
 			break;
 
 		default:
-			WLog_ERR(TAG, "unknown msgType: %" PRIu32 "", msgType);
+			WLog_ERR(TAG,  "unknown msgType: %"PRIu32"", msgType);
 			error = ERROR_INVALID_DATA;
 			break;
 	}
@@ -666,7 +666,7 @@ static UINT remdesk_process_receive(remdeskPlugin* remdesk, wStream* s)
 
 	if ((status = remdesk_read_channel_header(s, &header)))
 	{
-		WLog_ERR(TAG, "remdesk_read_channel_header failed with error %" PRIu32 "", status);
+		WLog_ERR(TAG, "remdesk_read_channel_header failed with error %"PRIu32"", status);
 		return status;
 	}
 
@@ -698,7 +698,7 @@ static UINT remdesk_process_receive(remdeskPlugin* remdesk, wStream* s)
 
 static void remdesk_process_connect(remdeskPlugin* remdesk)
 {
-	remdesk->settings = (rdpSettings*)remdesk->channelEntryPoints.pExtendedData;
+	remdesk->settings = (rdpSettings*) remdesk->channelEntryPoints.pExtendedData;
 }
 
 /**
@@ -745,7 +745,7 @@ static UINT remdesk_virtual_channel_event_data_received(remdeskPlugin* remdesk, 
 	{
 		if (Stream_Capacity(data_in) != Stream_GetPosition(data_in))
 		{
-			WLog_ERR(TAG, "read error");
+			WLog_ERR(TAG,  "read error");
 			return ERROR_INTERNAL_ERROR;
 		}
 
@@ -753,7 +753,7 @@ static UINT remdesk_virtual_channel_event_data_received(remdeskPlugin* remdesk, 
 		Stream_SealLength(data_in);
 		Stream_SetPosition(data_in, 0);
 
-		if (!MessageQueue_Post(remdesk->queue, NULL, 0, (void*)data_in, NULL))
+		if (!MessageQueue_Post(remdesk->queue, NULL, 0, (void*) data_in, NULL))
 		{
 			WLog_ERR(TAG, "MessageQueue_Post failed!");
 			return ERROR_INTERNAL_ERROR;
@@ -769,7 +769,7 @@ static VOID VCAPITYPE remdesk_virtual_channel_open_event_ex(LPVOID lpUserParam, 
                                                             UINT32 dataFlags)
 {
 	UINT error = CHANNEL_RC_OK;
-	remdeskPlugin* remdesk = (remdeskPlugin*)lpUserParam;
+	remdeskPlugin* remdesk = (remdeskPlugin*) lpUserParam;
 
 	switch (event)
 	{
@@ -794,13 +794,13 @@ static VOID VCAPITYPE remdesk_virtual_channel_open_event_ex(LPVOID lpUserParam, 
 			wStream* s = (wStream*)pData;
 			Stream_Free(s, TRUE);
 		}
-		break;
+			break;
 
 		case CHANNEL_EVENT_USER:
 			break;
 
 		default:
-			WLog_ERR(TAG, "unhandled event %" PRIu32 "!", event);
+			WLog_ERR(TAG, "unhandled event %"PRIu32"!", event);
 			error = ERROR_INTERNAL_ERROR;
 	}
 
@@ -813,7 +813,7 @@ static DWORD WINAPI remdesk_virtual_channel_client_thread(LPVOID arg)
 {
 	wStream* data;
 	wMessage message;
-	remdeskPlugin* remdesk = (remdeskPlugin*)arg;
+	remdeskPlugin* remdesk = (remdeskPlugin*) arg;
 	UINT error = CHANNEL_RC_OK;
 	remdesk_process_connect(remdesk);
 
@@ -838,11 +838,11 @@ static DWORD WINAPI remdesk_virtual_channel_client_thread(LPVOID arg)
 
 		if (message.id == 0)
 		{
-			data = (wStream*)message.wParam;
+			data = (wStream*) message.wParam;
 
 			if ((error = remdesk_process_receive(remdesk, data)))
 			{
-				WLog_ERR(TAG, "remdesk_process_receive failed with error %" PRIu32 "!", error);
+				WLog_ERR(TAG, "remdesk_process_receive failed with error %"PRIu32"!", error);
 				Stream_Free(data, TRUE);
 				break;
 			}
@@ -871,11 +871,11 @@ static UINT remdesk_virtual_channel_event_connected(remdeskPlugin* remdesk, LPVO
 	UINT error;
 	status = remdesk->channelEntryPoints.pVirtualChannelOpenEx(
 	    remdesk->InitHandle, &remdesk->OpenHandle, remdesk->channelDef.name,
-	    remdesk_virtual_channel_open_event_ex);
+	         remdesk_virtual_channel_open_event_ex);
 
 	if (status != CHANNEL_RC_OK)
 	{
-		WLog_ERR(TAG, "pVirtualChannelOpenEx failed with %s [%08" PRIX32 "]",
+		WLog_ERR(TAG,  "pVirtualChannelOpenEx failed with %s [%08"PRIX32"]",
 		         WTSErrorToString(status), status);
 		return status;
 	}
@@ -922,7 +922,7 @@ static UINT remdesk_virtual_channel_event_disconnected(remdeskPlugin* remdesk)
 	    (WaitForSingleObject(remdesk->thread, INFINITE) == WAIT_FAILED))
 	{
 		rc = GetLastError();
-		WLog_ERR(TAG, "WaitForSingleObject failed with error %" PRIu32 "", rc);
+		WLog_ERR(TAG, "WaitForSingleObject failed with error %"PRIu32"", rc);
 		return rc;
 	}
 
@@ -958,15 +958,15 @@ static void remdesk_virtual_channel_event_terminated(remdeskPlugin* remdesk)
 }
 
 static VOID VCAPITYPE remdesk_virtual_channel_init_event_ex(LPVOID lpUserParam, LPVOID pInitHandle,
-                                                            UINT event, LPVOID pData,
-                                                            UINT dataLength)
+        UINT event, LPVOID pData,
+        UINT dataLength)
 {
 	UINT error = CHANNEL_RC_OK;
-	remdeskPlugin* remdesk = (remdeskPlugin*)lpUserParam;
+	remdeskPlugin* remdesk = (remdeskPlugin*) lpUserParam;
 
 	if (!remdesk || (remdesk->InitHandle != pInitHandle))
 	{
-		WLog_ERR(TAG, "error no match");
+		WLog_ERR(TAG,  "error no match");
 		return;
 	}
 
@@ -1004,7 +1004,7 @@ static VOID VCAPITYPE remdesk_virtual_channel_init_event_ex(LPVOID lpUserParam, 
 }
 
 /* remdesk is always built-in */
-#define VirtualChannelEntryEx remdesk_VirtualChannelEntryEx
+#define VirtualChannelEntryEx	remdesk_VirtualChannelEntryEx
 
 BOOL VCAPITYPE VirtualChannelEntryEx(PCHANNEL_ENTRY_POINTS pEntryPoints, PVOID pInitHandle)
 {
@@ -1018,7 +1018,7 @@ BOOL VCAPITYPE VirtualChannelEntryEx(PCHANNEL_ENTRY_POINTS pEntryPoints, PVOID p
 		return FALSE;
 	}
 
-	remdesk = (remdeskPlugin*)calloc(1, sizeof(remdeskPlugin));
+	remdesk = (remdeskPlugin*) calloc(1, sizeof(remdeskPlugin));
 
 	if (!remdesk)
 	{
@@ -1030,12 +1030,12 @@ BOOL VCAPITYPE VirtualChannelEntryEx(PCHANNEL_ENTRY_POINTS pEntryPoints, PVOID p
 	                              CHANNEL_OPTION_COMPRESS_RDP | CHANNEL_OPTION_SHOW_PROTOCOL;
 	sprintf_s(remdesk->channelDef.name, ARRAYSIZE(remdesk->channelDef.name), "remdesk");
 	remdesk->Version = 2;
-	pEntryPointsEx = (CHANNEL_ENTRY_POINTS_FREERDP_EX*)pEntryPoints;
+	pEntryPointsEx = (CHANNEL_ENTRY_POINTS_FREERDP_EX*) pEntryPoints;
 
 	if ((pEntryPointsEx->cbSize >= sizeof(CHANNEL_ENTRY_POINTS_FREERDP_EX)) &&
 	    (pEntryPointsEx->MagicNumber == FREERDP_CHANNEL_MAGIC_NUMBER))
 	{
-		context = (RemdeskClientContext*)calloc(1, sizeof(RemdeskClientContext));
+		context = (RemdeskClientContext*) calloc(1, sizeof(RemdeskClientContext));
 
 		if (!context)
 		{
@@ -1043,7 +1043,7 @@ BOOL VCAPITYPE VirtualChannelEntryEx(PCHANNEL_ENTRY_POINTS pEntryPoints, PVOID p
 			goto error_out;
 		}
 
-		context->handle = (void*)remdesk;
+		context->handle = (void*) remdesk;
 		remdesk->context = context;
 		remdesk->rdpcontext = pEntryPointsEx->context;
 	}
@@ -1053,7 +1053,7 @@ BOOL VCAPITYPE VirtualChannelEntryEx(PCHANNEL_ENTRY_POINTS pEntryPoints, PVOID p
 	remdesk->InitHandle = pInitHandle;
 	rc = remdesk->channelEntryPoints.pVirtualChannelInitEx(
 	    remdesk, context, pInitHandle, &remdesk->channelDef, 1, VIRTUAL_CHANNEL_VERSION_WIN2000,
-	    remdesk_virtual_channel_init_event_ex);
+	        remdesk_virtual_channel_init_event_ex);
 
 	if (CHANNEL_RC_OK != rc)
 	{

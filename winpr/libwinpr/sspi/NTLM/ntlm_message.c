@@ -380,7 +380,7 @@ static BOOL ntlm_read_message_fields_buffer(wStream* s, NTLM_MESSAGE_FIELDS* fie
 			return FALSE;
 		}
 
-		fields->Buffer = (PBYTE)malloc(fields->Len);
+		fields->Buffer = (PBYTE) malloc(fields->Len);
 
 		if (!fields->Buffer)
 		{
@@ -827,10 +827,10 @@ SECURITY_STATUS ntlm_read_ChallengeMessage(NTLM_CONTEXT* context, PSecBuffer buf
 	if (!ntlm_compute_ntlm_v2_response(context)) /* NtChallengeResponse */
 		goto fail;
 
-	ntlm_generate_key_exchange_key(context);     /* KeyExchangeKey */
-	ntlm_generate_random_session_key(context);   /* RandomSessionKey */
+	ntlm_generate_key_exchange_key(context); /* KeyExchangeKey */
+	ntlm_generate_random_session_key(context); /* RandomSessionKey */
 	ntlm_generate_exported_session_key(context); /* ExportedSessionKey */
-	ntlm_encrypt_random_session_key(context);    /* EncryptedRandomSessionKey */
+	ntlm_encrypt_random_session_key(context); /* EncryptedRandomSessionKey */
 	/* Generate signing keys */
 	if (!ntlm_generate_client_signing_key(context))
 		goto fail;
@@ -876,8 +876,8 @@ SECURITY_STATUS ntlm_write_ChallengeMessage(NTLM_CONTEXT* context, PSecBuffer bu
 		return SEC_E_INTERNAL_ERROR;
 
 	ntlm_get_version_info(&(message->Version)); /* Version */
-	ntlm_generate_server_challenge(context);    /* Server Challenge */
-	ntlm_generate_timestamp(context);           /* Timestamp */
+	ntlm_generate_server_challenge(context); /* Server Challenge */
+	ntlm_generate_timestamp(context); /* Timestamp */
 
 	if (!ntlm_construct_challenge_target_info(context)) /* TargetInfo */
 		return SEC_E_INTERNAL_ERROR;
@@ -893,16 +893,16 @@ SECURITY_STATUS ntlm_write_ChallengeMessage(NTLM_CONTEXT* context, PSecBuffer bu
 
 	if (message->NegotiateFlags & NTLMSSP_REQUEST_TARGET)
 	{
-		message->TargetName.Len = (UINT16)context->TargetName.cbBuffer;
-		message->TargetName.Buffer = (PBYTE)context->TargetName.pvBuffer;
+		message->TargetName.Len = (UINT16) context->TargetName.cbBuffer;
+		message->TargetName.Buffer = (PBYTE) context->TargetName.pvBuffer;
 	}
 
 	message->NegotiateFlags |= NTLMSSP_NEGOTIATE_TARGET_INFO;
 
 	if (message->NegotiateFlags & NTLMSSP_NEGOTIATE_TARGET_INFO)
 	{
-		message->TargetInfo.Len = (UINT16)context->ChallengeTargetInfo.cbBuffer;
-		message->TargetInfo.Buffer = (PBYTE)context->ChallengeTargetInfo.pvBuffer;
+		message->TargetInfo.Len = (UINT16) context->ChallengeTargetInfo.cbBuffer;
+		message->TargetInfo.Buffer = (PBYTE) context->ChallengeTargetInfo.pvBuffer;
 	}
 
 	PayloadOffset = 48;
@@ -1077,7 +1077,7 @@ SECURITY_STATUS ntlm_read_AuthenticateMessage(NTLM_CONTEXT* context, PSecBuffer 
 		context->NtChallengeResponse.pvBuffer = message->NtChallengeResponse.Buffer;
 		context->NtChallengeResponse.cbBuffer = message->NtChallengeResponse.Len;
 		sspi_SecBufferFree(&(context->ChallengeTargetInfo));
-		context->ChallengeTargetInfo.pvBuffer = (void*)context->NTLMv2Response.Challenge.AvPairs;
+		context->ChallengeTargetInfo.pvBuffer = (void*) context->NTLMv2Response.Challenge.AvPairs;
 		context->ChallengeTargetInfo.cbBuffer = message->NtChallengeResponse.Len - (28 + 16);
 		CopyMemory(context->ClientChallenge, context->NTLMv2Response.Challenge.ClientChallenge, 8);
 		AvFlags =
@@ -1128,7 +1128,7 @@ SECURITY_STATUS ntlm_read_AuthenticateMessage(NTLM_CONTEXT* context, PSecBuffer 
 
 	if (message->UserName.Len > 0)
 	{
-		credentials->identity.User = (UINT16*)malloc(message->UserName.Len);
+		credentials->identity.User = (UINT16*) malloc(message->UserName.Len);
 
 		if (!credentials->identity.User)
 			goto fail;
@@ -1139,7 +1139,7 @@ SECURITY_STATUS ntlm_read_AuthenticateMessage(NTLM_CONTEXT* context, PSecBuffer 
 
 	if (message->DomainName.Len > 0)
 	{
-		credentials->identity.Domain = (UINT16*)malloc(message->DomainName.Len);
+		credentials->identity.Domain = (UINT16*) malloc(message->DomainName.Len);
 
 		if (!credentials->identity.Domain)
 			goto fail;
@@ -1224,22 +1224,22 @@ SECURITY_STATUS ntlm_write_AuthenticateMessage(NTLM_CONTEXT* context, PSecBuffer
 	if (message->NegotiateFlags & NTLMSSP_NEGOTIATE_WORKSTATION_SUPPLIED)
 	{
 		message->Workstation.Len = context->Workstation.Length;
-		message->Workstation.Buffer = (BYTE*)context->Workstation.Buffer;
+		message->Workstation.Buffer = (BYTE*) context->Workstation.Buffer;
 	}
 
 	if (credentials->identity.DomainLength > 0)
 	{
 		message->NegotiateFlags |= NTLMSSP_NEGOTIATE_DOMAIN_SUPPLIED;
-		message->DomainName.Len = (UINT16)credentials->identity.DomainLength * 2;
-		message->DomainName.Buffer = (BYTE*)credentials->identity.Domain;
+		message->DomainName.Len = (UINT16) credentials->identity.DomainLength * 2;
+		message->DomainName.Buffer = (BYTE*) credentials->identity.Domain;
 	}
 
-	message->UserName.Len = (UINT16)credentials->identity.UserLength * 2;
-	message->UserName.Buffer = (BYTE*)credentials->identity.User;
-	message->LmChallengeResponse.Len = (UINT16)context->LmChallengeResponse.cbBuffer;
-	message->LmChallengeResponse.Buffer = (BYTE*)context->LmChallengeResponse.pvBuffer;
-	message->NtChallengeResponse.Len = (UINT16)context->NtChallengeResponse.cbBuffer;
-	message->NtChallengeResponse.Buffer = (BYTE*)context->NtChallengeResponse.pvBuffer;
+	message->UserName.Len = (UINT16) credentials->identity.UserLength * 2;
+	message->UserName.Buffer = (BYTE*) credentials->identity.User;
+	message->LmChallengeResponse.Len = (UINT16) context->LmChallengeResponse.cbBuffer;
+	message->LmChallengeResponse.Buffer = (BYTE*) context->LmChallengeResponse.pvBuffer;
+	message->NtChallengeResponse.Len = (UINT16) context->NtChallengeResponse.cbBuffer;
+	message->NtChallengeResponse.Buffer = (BYTE*) context->NtChallengeResponse.pvBuffer;
 
 	if (message->NegotiateFlags & NTLMSSP_NEGOTIATE_KEY_EXCH)
 	{

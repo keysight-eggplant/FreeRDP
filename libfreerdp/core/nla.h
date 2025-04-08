@@ -36,6 +36,9 @@ typedef struct rdp_nla rdpNla;
 
 #include "transport.h"
 
+#include "smartcardlogon.h"
+#include "tscredentials.h"
+
 enum _NLA_STATE
 {
 	NLA_STATE_INITIAL,
@@ -46,6 +49,53 @@ enum _NLA_STATE
 	NLA_STATE_FINAL
 };
 typedef enum _NLA_STATE NLA_STATE;
+
+struct rdp_nla
+{
+  BOOL server;
+  NLA_STATE state;
+  int sendSeqNum;
+  int recvSeqNum;
+  freerdp* instance;
+  CtxtHandle context;
+  LPTSTR SspiModule;
+  char* SamFile;
+  rdpSettings* settings;
+  rdpTransport* transport;
+  UINT32 cbMaxToken;
+#if defined(UNICODE)
+  SEC_WCHAR* packageName;
+#else
+  SEC_CHAR* packageName;
+#endif
+  UINT32 version;
+  UINT32 peerVersion;
+  UINT32 errorCode;
+  ULONG fContextReq;
+  ULONG pfContextAttr;
+  BOOL haveContext;
+  BOOL haveInputBuffer;
+  BOOL havePubKeyAuth;
+  SECURITY_STATUS status;
+  CredHandle credentials;
+  TimeStamp expiration;
+  PSecPkgInfo pPackageInfo;
+  SecBuffer inputBuffer;
+  SecBuffer outputBuffer;
+  SecBufferDesc inputBufferDesc;
+  SecBufferDesc outputBufferDesc;
+  SecBuffer negoToken;
+  SecBuffer pubKeyAuth;
+  SecBuffer authInfo;
+  SecBuffer ClientNonce;
+  SecBuffer PublicKey;
+  SecBuffer tsCredentials;
+  LPTSTR ServicePrincipalName;
+  PSecurityFunctionTable table;
+  SecPkgContext_Sizes ContextSizes;
+  auth_identity*  identity;
+};
+
 
 FREERDP_LOCAL int nla_authenticate(rdpNla* nla);
 FREERDP_LOCAL LPTSTR nla_make_spn(const char* ServiceClass, const char* hostname);

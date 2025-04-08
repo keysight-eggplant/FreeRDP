@@ -31,6 +31,7 @@
 
 #include <shlobj.h>
 #include <userenv.h>
+#define FD_SHOWPROGRESSUI               0x00004000
 
 #else
 
