@@ -1749,8 +1749,19 @@ static BOOL prepare_default_settings(rdpSettings* settings, const COMMAND_LINE_A
 	return freerdp_set_connection_type(settings, CONNECTION_TYPE_AUTODETECT);
 }
 
-int freerdp_client_settings_parse_command_line_arguments(rdpSettings* settings, int argc,
-                                                         char** argv, BOOL allowUnknown)
+#define CHECK_MEMORY(pointer)				      \
+	do                                                    \
+	{                                                     \
+		if (!(pointer))				      \
+		{                                             \
+			WLog_ERR(TAG, "%s:%d: out of memory", \
+			         __FUNCTION__, __LINE__);      \
+			return COMMAND_LINE_ERROR_MEMORY;     \
+		}                                             \
+	}while (0)
+
+int freerdp_client_settings_parse_command_line_arguments(rdpSettings* settings,
+        int argc, char** argv, BOOL allowUnknown)
 {
 	char* p;
 	char* user = NULL;
