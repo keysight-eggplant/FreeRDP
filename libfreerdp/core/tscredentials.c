@@ -1226,23 +1226,4 @@ size_t nla_write_ts_creds(auth_identity* identity, wStream* s)
 	}
 }
 
-
-size_t nla_write_ts_credentials(auth_identity* identity, wStream* s)
-{
-	size_t size = 0;
-	size_t cred_size = 0;
-	size_t inner_size = nla_sizeof_ts_credentials_inner(identity);
-	/* TSCredentials (SEQUENCE) */
-	size += ber_write_sequence_tag(s, inner_size);
-	/* [0] credType (INTEGER) */
-	size += ber_write_contextual_tag(s, 0, ber_sizeof_integer(identity->cred_type), TRUE);
-	size += ber_write_integer(s, identity->cred_type);
-	/* [1] credentials (OCTET STRING) */
-	cred_size = nla_sizeof_ts_creds(identity);
-	size += ber_write_contextual_tag(s, 1, ber_sizeof_octet_string(cred_size), TRUE);
-	size += ber_write_octet_string_tag(s, cred_size);
-	size += nla_write_ts_creds(identity, s);
-	return size;
-}
-
 /**** THE END ****/
