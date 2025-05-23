@@ -162,7 +162,6 @@ struct rdp_nla
 	SEC_WINNT_AUTH_IDENTITY* identity;
 	PSecurityFunctionTable table;
 	SecPkgContext_Sizes ContextSizes;
-	auth_identity* identity;
 };
 
 static int nla_client_init_smartcard_logon(rdpNla* nla);
