@@ -1066,32 +1066,6 @@ static auth_identity* nla_read_ts_creds(wStream* s, credential_type cred_type, s
 	return NULL;
 }
 
-size_t nla_write_ts_password_creds(SEC_WINNT_AUTH_IDENTITY* password_creds, wStream* s)
-{
-	size_t size = 0;
-	size_t inner_size = nla_sizeof_ts_password_creds_inner(password_creds);
-	/* TSPasswordCreds (SEQUENCE) */
-	size += ber_write_sequence_tag(s, inner_size);
-
-	if (password_creds != NULL)
-	{
-		/* [0] domainName (OCTET STRING) */
-		size += ber_write_sequence_octet_string(
-		            s, 0, (BYTE*) password_creds->Domain,
-		            password_creds->DomainLength * 2);
-		/* [1] userName (OCTET STRING) */
-		size += ber_write_sequence_octet_string(
-		            s, 1, (BYTE*) password_creds->User,
-		            password_creds->UserLength * 2);
-		/* [2] password (OCTET STRING) */
-		size += ber_write_sequence_octet_string(
-		            s, 2, (BYTE*) password_creds->Password,
-		            password_creds->PasswordLength * 2);
-	}
-
-	return size;
-}
-
 size_t nla_write_ts_csp_data_detail(csp_data_detail* csp_data, int contextual_tag,  wStream* s)
 {
 	size_t size = 0;

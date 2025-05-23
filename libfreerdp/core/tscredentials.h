@@ -137,7 +137,6 @@ size_t nla_sizeof_ts_remote_guard_package_cred(remote_guard_package_cred* packag
 size_t nla_sizeof_ts_remote_guard_creds_inner(remote_guard_creds* remote_guard_creds);
 size_t nla_sizeof_ts_remote_guard_creds(remote_guard_creds* remote_guard_creds);
 
-size_t nla_write_ts_password_creds(SEC_WINNT_AUTH_IDENTITY* password_creds, wStream* s);
 size_t nla_write_ts_csp_data_detail(csp_data_detail* csp_data, int contextual_tag,  wStream* s);
 size_t nla_write_ts_smartcard_creds(smartcard_creds* smartcard_creds, wStream* s);
 size_t nla_write_ts_remote_guard_package_cred(remote_guard_package_cred* package_cred, wStream* s);
