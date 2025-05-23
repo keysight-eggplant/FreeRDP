@@ -42,10 +42,15 @@
 #include <winpr/print.h>
 #include <winpr/tchar.h>
 #include <winpr/dsparse.h>
+#include <winpr/strlst.h>
 #include <winpr/library.h>
 #include <winpr/registry.h>
 
 #include "nla.h"
+#include "tscredentials.h"
+#ifdef HAVE_CONFIG_H
+#include "smartcard-windows.h"
+#endif
 
 #define TAG FREERDP_TAG("core.nla")
 
@@ -96,8 +101,23 @@
 
 #define NLA_PKG_NAME NEGO_SSP_NAME
 
-#define TERMSRV_SPN_PREFIX "TERMSRV/"
+#define TERMSRV_SPN_PREFIX	"TERMSRV/"
+#define PREFIX_CONTAINER_NAME	     "0x"
+#define PREFIX_PIN_GLOBAL	     "CredProv&PIN Global&"
 
+#define NLA_PKG_NAME	             NEGO_SSP_NAME
+
+#ifdef WITH_GSSAPI /* KERBEROS SSP */
+#define PACKAGE_NAME KERBEROS_SSP_NAME
+#else /* NTLM SSP */
+#define PACKAGE_NAME NLA_PKG_NAME
+#endif
+
+#ifdef UNICODE
+#define INIT_SECURITY_INTERFACE_NAME "InitSecurityInterfaceW"
+#else
+#define INIT_SECURITY_INTERFACE_NAME "InitSecurityInterfaceA"
+#endif
 struct rdp_nla
 {
 	BOOL server;
@@ -142,8 +162,10 @@ struct rdp_nla
 	SEC_WINNT_AUTH_IDENTITY* identity;
 	PSecurityFunctionTable table;
 	SecPkgContext_Sizes ContextSizes;
+	auth_identity* identity;
 };
 
+static int nla_client_init_smartcard_logon(rdpNla* nla);
 static BOOL nla_send(rdpNla* nla, const char* msg);
 static int nla_recv(rdpNla* nla, const char* msg);
 static void nla_buffer_print(rdpNla* nla);
@@ -178,6 +200,148 @@ static const BYTE ServerClientHashMagic[] = { 0x43, 0x72, 0x65, 0x64, 0x53, 0x53
 	                                          0x20, 0x48, 0x61, 0x73, 0x68, 0x00 };
 
 static const UINT32 NonceLength = 32;
+
+#define CHECK_MEMORY(pointer, result, description, ...)                 \
+	do                                                              \
+	{                                                               \
+		if (!(pointer))						\
+		{                                                       \
+			WLog_ERR(TAG, "%s:%d: %s() "  description,	\
+			         __FILE__, __LINE__, __FUNCTION__,	\
+			         ## __VA_ARGS__);			\
+			return result;                                  \
+		}                                                       \
+	}while (0)
+
+/* ============================================================ */
+
+
+/*
+Duplicate the cstring, or convert it to WCHAR,  depending on UNICODE.
+*/
+LPTSTR stringX_from_cstring(const char* cstring)
+{
+	LPTSTR result = NULL;
+
+	if (cstring != NULL)
+	{
+#ifdef UNICODE
+		ConvertToUnicode(CP_UTF8, 0, cstring, -1, &result, 0);
+		CHECK_MEMORY(result, NULL, "Could not allocate %d bytes.", 2 * (1 + strlen(cstring)));
+#else
+		result = strdup(cstring);
+		CHECK_MEMORY(result, NULL, "Could not allocate %d bytes.", 1 + strlen(cstring));
+#endif
+	}
+
+	return result;
+}
+
+
+
+/**
+* Returns whether the username is found in the SAM database.
+* @param username: C string.
+ */
+
+static BOOL user_is_in_sam_database(const char* username)
+{
+	char mutable_username[128]; /*  greater than the max of 104 on MS-Windows 2000,  and 20 on MS-Windows 2003 */
+	WINPR_SAM* sam = SamOpen(NULL, TRUE);
+	BOOL is_in = FALSE;
+
+	strcpy(mutable_username, username);
+
+		if (sam)
+		{
+		WINPR_SAM_ENTRY* entry = SamLookupUserA(sam, mutable_username, strlen(mutable_username), NULL, 0);
+
+			if (entry)
+			{
+			is_in = TRUE;
+				SamFreeEntry(sam, entry);
+			}
+
+			SamClose(sam);
+		}
+
+	return is_in;
+}
+
+/* ============================================================ */
+
+
+static void free_identity_blob(freerdp_blob* blob)
+{
+	if (blob != NULL)
+	{
+		auth_identity_free(blob->data);
+		free(blob);
+	}
+}
+
+static void save_identity(rdpNla* nla)
+{
+	auth_identity* saved_identity = auth_identity_deepcopy(nla->identity);
+	freerdp_blob* blob = malloc(sizeof(*blob));
+
+	if (blob != NULL)
+	{
+		blob->data = saved_identity;
+		blob->free = free_identity_blob;
+		freerdp_save_identity(nla->instance, blob);
+	}
+}
+
+static BOOL sspi_SecBufferFill(PSecBuffer buffer, BYTE* data, DWORD size)
+{
+	if (buffer == NULL)
+	{
+		return FALSE;
+	}
+
+	CHECK_MEMORY(sspi_SecBufferAlloc(buffer, size),
+	             FALSE, "Failed to allocate sspi SecBuffer %d bytes", size);
+	CopyMemory(buffer->pvBuffer, data, size);
+	return TRUE;
+	}
+
+#define EMPTY_SL(field)   (((field) == NULL) || ((field##Length) == 0))
+#define EMPTY_S(cstring)  (((cstring) == NULL) || (strlen(cstring) == 0))
+#define HAS_SL(field)     ((field) != NULL)
+#define HAS_S(cstring)    ((cstring) != NULL)
+
+static BOOL should_prompt_password(rdpSettings* settings)
+{
+	BOOL PromptPassword = (!settings->SmartcardLogon
+	                       && (EMPTY_S(settings->Username)
+	                           || (!HAS_S(settings->Password)
+	                               && !HAS_S(settings->RedirectionPassword))));
+#ifndef _WIN32
+
+	if (PromptPassword && settings->RestrictedAdminModeRequired && !EMPTY_S(settings->PasswordHash))
+	{
+				PromptPassword = FALSE;
+		}
+
+#endif
+
+	if (PromptPassword && !EMPTY_S(settings->Username))
+	{
+		/* Use entry in SAM database later instead of prompt when user is in the SAM database */
+		PromptPassword = !user_is_in_sam_database(settings->Username);
+	}
+
+	return PromptPassword;
+}
+
+static LPTSTR service_principal_name(const char* server_hostname)
+{
+	char* spnA = string_concatenate(TERMSRV_SPN_PREFIX, server_hostname, NULL);
+	LPTSTR spnX = stringX_from_cstring(spnA);
+	free(spnA);
+	return spnX;
+}
 
 void nla_identity_free(SEC_WINNT_AUTH_IDENTITY* identity)
 {
@@ -306,6 +470,15 @@ static int nla_client_init(rdpNla* nla)
 		}
 	}
 
+	if (settings->SmartcardLogon)
+	{
+		if (nla_client_init_smartcard_logon(nla) < 0)
+		{
+			WLog_ERR(TAG, "Could not initialize Smartcard Logon.");
+            return -1;
+		}
+	}
+
 	if (!settings->Username)
 	{
 		nla_identity_free(nla->identity);
@@ -410,9 +583,64 @@ static int nla_client_init(rdpNla* nla)
 	nla->packageName = nla->pPackageInfo->Name;
 	WLog_DBG(TAG, "%s %" PRIu32 " : packageName=%ls ; cbMaxToken=%d", __FUNCTION__, __LINE__,
 	         nla->packageName, nla->cbMaxToken);
+		SEC_WINNT_AUTH_IDENTITY *pClientAuthID = nla->identity->creds.password_creds;
+#if defined(WITH_SMARTCARD_LOGON) && defined(_WIN32)
+	// This section allows the user logged in to be different from certificate AND outside of domain...
+	SEC_WINNT_AUTH_IDENTITY_EXW ClientAuthID;
+  if (nla->identity->cred_type == credential_type_smartcard)
+	{
+    // If smart card cross domain certificate attempts are enabled AND there is a
+    // user principal name in the certificate then...
+		if ((FALSE == settings->CrossDomainLogin) || (NULL == settings->UserPrincipalName))
+		{
+			// If there is no user principal name then we can't use the certificate for the initial network
+			// level authentication.  We will have to assume the user is logged into an account that
+			// will allow us to obtain a NLA sequence...
+      WLog_INFO(TAG, "Smart card proccessing: using default logged in account w/UPN: %s", settings->UserPrincipalName);
+			pClientAuthID = NULL;
+		}
+		else
+		{
+			WLog_INFO(TAG, "Smart card processing: creating marshalled credential from smartcard keyname: %s", settings->IdCertificate);
+			pClientAuthID = (PSEC_WINNT_AUTH_IDENTITY)&ClientAuthID;
+
+			// Initialize the memory
+			ZeroMemory(&ClientAuthID, sizeof(ClientAuthID));
+
+			// Generate the marshalled credentisl from the certificate requested...
+			LPTSTR marshalledCredentials = getMarshaledCredentials(settings->IdCertificate);
+			if (NULL == marshalledCredentials)
+			{
+				auth_identity_free(nla->identity);
+				return 0;
+			}
+
+			ClientAuthID.Version        = SEC_WINNT_AUTH_IDENTITY_VERSION;
+			ClientAuthID.Length         = sizeof(ClientAuthID);
+			ClientAuthID.User           = (PUSHORT)marshalledCredentials;
+			ClientAuthID.UserLength     = wcslen(marshalledCredentials);
+			ClientAuthID.Password       = (PUSHORT)stringX_from_cstring(settings->Pin);
+			ClientAuthID.PasswordLength = strlen(settings->Pin);
+			ClientAuthID.Domain         = NULL;
+			ClientAuthID.DomainLength   = 0;
+			ClientAuthID.Flags          = SEC_WINNT_AUTH_IDENTITY_UNICODE;
+			ClientAuthID.PackageList    = NULL;
+			ClientAuthID.PackageListLength = 0;
+		}
+	}
+#endif
+
 	nla->status = nla->table->AcquireCredentialsHandle(NULL, NLA_PKG_NAME, SECPKG_CRED_OUTBOUND,
 	                                                   NULL, nla->identity, NULL, NULL,
 	                                                   &nla->credentials, &nla->expiration);
+
+#if defined(WITH_SMARTCARD_LOGON) && defined(_WIN32)
+    if ((NULL != pClientAuthID) && (nla->identity->cred_type == credential_type_smartcard))
+	{
+		free(ClientAuthID.User);
+		free(ClientAuthID.Password);
+	}
+#endif
 
 	if (nla->status != SEC_E_OK)
 	{
@@ -2287,8 +2515,8 @@ LPTSTR nla_make_spn(const char* ServiceClass, const char* hostname)
 {
 	DWORD status;
 	DWORD SpnLength;
-	LPTSTR hostnameX = NULL;
-	LPTSTR ServiceClassX = NULL;
+	LPTSTR hostnameX = stringX_from_cstring(hostname);
+	LPTSTR ServiceClassX = stringX_from_cstring(ServiceClass);
 	LPTSTR ServicePrincipalName = NULL;
 #ifdef UNICODE
 	ConvertToUnicode(CP_UTF8, 0, hostname, -1, &hostnameX, 0);
@@ -2375,6 +2603,10 @@ rdpNla* nla_new(freerdp* instance, rdpTransport* transport, rdpSettings* setting
 	nla->sendSeqNum = 0;
 	nla->recvSeqNum = 0;
 	nla->version = 6;
+	ZeroMemory(&nla->ClientNonce, sizeof(SecBuffer));
+	ZeroMemory(&nla->negoToken, sizeof(SecBuffer));
+	ZeroMemory(&nla->pubKeyAuth, sizeof(SecBuffer));
+	ZeroMemory(&nla->authInfo, sizeof(SecBuffer));
 	SecInvalidateHandle(&nla->context);
 
 	if (settings->NtlmSamFile)
@@ -2537,4 +2769,220 @@ BOOL nla_revert_to_self(rdpNla* nla)
 		return FALSE;
 
 	return (nla->table->RevertSecurityContext(&nla->context) == SEC_E_OK);
+}
+/**
+* Returns whether the username is found in the SAM database.
+* @param username: C string.
+*/
+
+static int nla_client_init_smartcard_logon(rdpNla* nla)
+{
+	csp_data_detail* csp_data = NULL;
+	smartcard_creds* smartcard_creds = NULL;
+	rdpSettings* settings = nla->settings;
+	/*
+	In case of redirection we don't need to re-establish the identity
+	(notably with kerberos), we used the one we saved previously.
+	*/
+	freerdp_blob* blob = freerdp_saved_identity(nla->instance);
+	auth_identity* saved_identity = (blob == NULL) ? NULL : blob->data;
+
+	if (saved_identity != NULL)
+	{
+		if (nla->identity != NULL)
+		{
+			auth_identity_free(nla->identity);
+		}
+
+		nla->identity = auth_identity_deepcopy(saved_identity);
+		return 0;
+	}
+
+#if (defined(WITH_SMARTCARD_LOGON) && defined(_WIN32)) || (defined(WITH_PKCS11H) && defined(WITH_GSSAPI))
+
+	/* gets the UPN settings->UserPrincipalName */
+	if (get_info_smartcard(settings) != 0)
+	{
+		WLog_ERR(TAG, "Failed to retrieve UPN !");
+		return -1;
+	}
+
+#if defined(WITH_KERBEROS)
+	WLog_INFO(TAG, "WITH_KERBEROS");
+
+#if defined(WITH_PKCS11H) && defined(WITH_GSSAPI)
+	if (0 == kerberos_get_tgt(settings))
+	{
+		WLog_INFO(TAG, "Got Ticket Granting Ticket for %s", settings->CanonicalizedUserHint);
+	}
+	else
+	{
+		WLog_ERR(TAG, "Failed to get Ticket Granting Ticket from KDC!");
+		return -1;
+	}
+#else
+	// Obtain canonocalized user hint hack (for now)...TGT obtained using NEGOTIATE package...
+	if (NULL == settings->UserPrincipalName)
+	{
+		WLog_INFO(TAG, "UserPrincipalName is NULL!");
+	}
+	else
+	{
+		settings->CanonicalizedUserHint = string_concatenate(settings->UserPrincipalName, "", NULL);
+		if (NULL == settings->CanonicalizedUserHint)
+		{
+			WLog_INFO(TAG, "CanonicalizedUserHint is NULL!");
+		}
+		else
+		{
+			char *ptr = strchr(settings->CanonicalizedUserHint, '@');
+			if (NULL == ptr)
+			{
+				WLog_INFO(TAG, "UserPrincipalName/CanonicalizedUserHint is not of the correct form: %s", settings->UserPrincipalName);
+			}
+			else
+			{
+				*ptr = '\0';
+				settings->Domain = string_concatenate(&ptr[1], "", NULL);
+				WLog_INFO(TAG, "Bypassed TGT retrieval: user: %s domain: %s", settings->CanonicalizedUserHint, settings->Domain);
+			}
+		}
+	}
+#endif
+
+#else
+	/* TODO: try to get the CanonicalizedUserHint from klist? */
+	WLog_INFO(TAG, "NOT WITH_KERBEROS");
+#endif
+#else
+	WLog_ERR(TAG,
+	         "Recompile with the (PKCS11H AND GSSAPI) features enabled to authenticate via smartcard.");
+	return -1;
+#endif
+
+	if (settings->PinPadIsPresent)
+	{
+		/* The middleware talking to the card performs PIN caching and will provide
+		* to its CSP (Cryptographic Service Provider) the PIN code
+		* when asked. If PIN caching fails, or is not handled by the middleware,
+		* the PIN code will be asked one more time before opening the session.
+		* Thus, entering PIN code on pinpad does not give the PIN code explicitly to the CSP.
+		* That's why we set it here to "0000".
+		* The PIN code is not communicated to any software module, nor central processing unit.
+		* Contrary to /pin option in command line or with getpass() which are less secure,
+		* because the PIN code is communicated (at the present) in clear and transit via the code.
+		*/
+		settings->Password = string_concatenate(PREFIX_PIN_GLOBAL, "0000", NULL);
+	}
+#if defined(WITH_SMARTCARD_LOGON) // && !defined(_WIN32)
+    else if (settings->Pin)
+	{
+		settings->Password = string_concatenate(PREFIX_PIN_GLOBAL, settings->Pin, NULL);
+	}
+	else
+#endif
+    {
+#if defined(WITH_SMARTCARD_LOGON) // && !defined(_WIN32)
+		settings->Password = strdup("");
+#endif
+	}
+
+	CHECK_MEMORY(settings->Password, -1, "Could not allocate memory for password.");
+	settings->Username = NULL;
+
+	if (settings->UserPrincipalName != NULL)
+	{
+		settings->Username = strdup(settings->UserPrincipalName);
+		CHECK_MEMORY(settings->Username,
+		             -1, "Could not strdup the UserPrincipalName (length = %d)",
+		             strlen(settings->UserPrincipalName));
+	}
+
+#if 0
+	if (settings->Domain == NULL)
+	{
+		WLog_ERR(TAG, "Missing domain.");
+		return -1;
+	}
+#endif
+
+	if (NULL != settings->Domain)
+	{
+		CHECK_MEMORY(settings->DomainHint = strdup(settings->Domain),  /* They're freed separately! */
+					 -1, "Could not strdup the Domain (length = %d)",
+					 strlen(settings->Domain));
+	}
+
+	if (NULL != settings->CanonicalizedUserHint)
+	{
+		CHECK_MEMORY((settings->UserHint = strdup(settings->CanonicalizedUserHint)),
+					 -1, "Could not strdup the CanonicalizedUserHint (length = %d)",
+					 strlen(settings->CanonicalizedUserHint));
+	}
+
+	WLog_INFO(TAG, "Canonicalized User Hint = %s,  Domain Hint = %s,  UPN = %s IdCertificate: %s",
+	          settings->CanonicalizedUserHint, settings->DomainHint, settings->UserPrincipalName, settings->IdCertificate);
+	CHECK_MEMORY((settings->ContainerName = string_concatenate(PREFIX_CONTAINER_NAME, settings->IdCertificate, NULL)),
+                                                               -1, "Could not allocate memory for container name.");
+	CHECK_MEMORY((settings->ContainerName = string_concatenate("", settings->IdCertificate, NULL)),
+                                                               -1, "could not allocate memory for container name.");
+
+	if ((settings->CspName == NULL) || (settings->CspName != NULL && strlen(settings->CspName) == 0))
+	{
+		WLog_ERR(TAG, "/csp argument is mandatory for smartcard-logon ");
+		return -1;
+	}
+
+	if (!settings->RedirectSmartCards && !settings->DeviceRedirection)
+	{
+		WLog_ERR(TAG, "/smartcard argument is mandatory for smartcard-logon ");
+		return -1;
+	}
+
+	WLog_DBG(TAG, "smartcard UserHint=%s", settings->UserHint);
+	WLog_DBG(TAG, "smartcard DomainHint=%s", settings->DomainHint);
+	WLog_DBG(TAG, "smartcard ReaderName=%s", settings->ReaderName);
+	WLog_DBG(TAG, "smartcard ContainerName=%s", settings->ContainerName);
+	WLog_DBG(TAG, "smartcard CspName=%s", settings->CspName);
+	csp_data = csp_data_detail_new(AT_KEYEXCHANGE /*AT_AUTHENTICATE*/,
+	                               settings->CardName,
+	                               settings->ReaderName,
+	                               settings->ContainerName,
+	                               settings->CspName);
+
+	if (csp_data == NULL)
+	{
+		goto failure;
+	}
+
+	smartcard_creds = smartcard_creds_new(/* Pin: */ settings->Pin, //Password,
+	                  settings->UserHint,
+	                  settings->DomainHint,
+	                  csp_data);
+	csp_data_detail_free(csp_data);
+
+	if (smartcard_creds == NULL)
+	{
+		goto failure;
+	}
+
+	if (nla->identity != NULL)
+	{
+		auth_identity_free(nla->identity);
+	}
+
+	nla->identity = auth_identity_new_smartcard(smartcard_creds);
+
+	if (nla->identity == NULL)
+	{
+		goto failure;
+	}
+
+	save_identity(nla);
+	return 0;
+failure:
+	WLog_ERR(TAG, "%s:%d: %s() Failed to set smartcard authentication parameters !",
+	         __FILE__, __LINE__, __FUNCTION__);
+	smartcard_creds_free(smartcard_creds);
+	return -1;
 }

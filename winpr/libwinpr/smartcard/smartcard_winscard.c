@@ -111,6 +111,7 @@ SCardApiFunctionTable WinSCard_SCardApiFunctionTable = {
 	NULL, /* SCardListReadersWithDeviceInstanceIdA */
 	NULL, /* SCardListReadersWithDeviceInstanceIdW */
 	NULL  /* SCardAudit */
+	NULL /* SCardAddReaderName */
 };
 
 PSCardApiFunctionTable WinSCard_GetSCardApiFunctionTable(void)

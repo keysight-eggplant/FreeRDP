@@ -211,6 +211,20 @@ typedef SecPkgInfoW* PSecPkgInfoW;
 #define SEC_I_SIGNATURE_NEEDED (SECURITY_STATUS)0x0009035CL
 #define SEC_I_NO_RENEGOTIATION (SECURITY_STATUS)0x00090360L
 
+#else // ndef win32
+
+#if defined(__MINGW32__)
+#define SEC_E_INVALID_PARAMETER			0x8009035D
+#define SEC_E_DELEGATION_POLICY			0x8009035E
+#define SEC_E_POLICY_NLTM_ONLY			0x8009035F
+#define SEC_E_NO_CONTEXT			0x80090361
+#define SEC_E_PKU2U_CERT_FAILURE			0x80090362
+#define SEC_E_MUTUAL_AUTH_FAILED			0x80090363
+
+#define SEC_I_SIGNATURE_NEEDED			0x0009035C
+#define SEC_I_NO_RENEGOTIATION			0x00090360
+#endif
+
 #endif
 
 #define SECURITY_NATIVE_DREP 0x00000010
@@ -466,14 +480,25 @@ struct _SecPkgCredentials_NamesW
 typedef struct _SecPkgCredentials_NamesW SecPkgCredentials_NamesW;
 typedef SecPkgCredentials_NamesW* PSecPkgCredentials_NamesW;
 
+#else //ndef win32
+
+#if defined(__MINGW32__)
+struct _SecPkgContext_Bindings
+{
+	UINT32 BindingsLength;
+	SEC_CHANNEL_BINDINGS* Bindings;
+};
+typedef struct _SecPkgContext_Bindings SecPkgContext_Bindings;
+#endif
+
+#endif
+
 #ifdef UNICODE
 #define SecPkgCredentials_Names SecPkgCredentials_NamesW
 #define PSecPkgCredentials_Names PSecPkgCredentials_NamesW
 #else
 #define SecPkgCredentials_Names SecPkgCredentials_NamesA
 #define PSecPkgCredentials_Names PSecPkgCredentials_NamesA
-#endif
-
 #endif
 
 /* InitializeSecurityContext Flags */

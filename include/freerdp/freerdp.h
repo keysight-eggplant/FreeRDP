@@ -298,6 +298,12 @@ extern "C"
 
 #include <freerdp/client.h>
 
+typedef struct freerdp_blob
+{
+	void* data;
+	void (*free)(struct freerdp_blob*);
+} freerdp_blob;
+
 	/** Defines the options for a given instance of RDP connection.
 	 *  This is built by the client and given to the FreeRDP library to create the connection
 	 *  with the expected options.
@@ -440,6 +446,7 @@ extern "C"
 		                         Callback for changed certificate validation.
 		                         Used when a certificate differs from stored fingerprint. */
 		UINT64 paddingE[80 - 68];       /* 68 */
+		ALIGN64 freerdp_blob* saved_identity;
 	};
 
 	struct rdp_channel_handles
@@ -546,6 +553,9 @@ extern "C"
 	FREERDP_API BOOL checkChannelErrorEvent(rdpContext* context);
 
 	FREERDP_API const char* freerdp_nego_get_routing_token(rdpContext* context, DWORD* length);
+
+	FREERDP_API freerdp_blob* freerdp_saved_identity(freerdp* instance);
+	FREERDP_API void freerdp_save_identity(freerdp* instance, freerdp_blob* identity);
 
 	FREERDP_API CONNECTION_STATE freerdp_get_state(rdpContext* context);
 	FREERDP_API const char* freerdp_state_string(CONNECTION_STATE state);

@@ -777,6 +777,14 @@ static BOOL rdp_write_info_packet(rdpRdp* rdp, wStream* s)
 			passwordW = ptrconv.wp;
 			cbPassword = (UINT16)settings->RedirectionPasswordLength;
 		}
+		else if (settings->SmartcardLogon)
+		{
+			WLog_DBG(TAG, "using pin (hidden)");
+			cbPassword = ConvertToUnicode(CP_UTF8, 0, settings->Pin, -1, &passwordW, 0) * 2;
+			free(userNameW);
+			userNameW = NULL;
+			cbUserName = 0;
+		}
 		else
 		{
 			const int rc = ConvertToUnicode(CP_UTF8, 0, settings->Password, -1, &passwordW, 0);
@@ -844,6 +852,14 @@ static BOOL rdp_write_info_packet(rdpRdp* rdp, wStream* s)
 			goto fail;
 		cbWorkingDir = (UINT16)rc * 2;
 	}
+
+	WLog_DBG(TAG, "cbDomain: %d -> %s", cbDomain, settings->Domain);
+	WLog_DBG(TAG, "cbUserName: %d -> %s", cbUserName, settings->Username);
+	if (settings->Pin)
+		WLog_DBG(TAG, "cbPin: %d -> hidden", strlen(settings->Pin));
+	WLog_DBG(TAG, "cbPassword: %d -> %s", cbPassword, settings->Password);
+	WLog_DBG(TAG, "cbAlternateShell: %d -> %s", cbAlternateShell, settings->AlternateShell);
+	WLog_DBG(TAG, "cbWorkingDir: %d -> %s", cbWorkingDir, settings->ShellWorkingDirectory);
 
 	/* excludes (!) the length of the mandatory null terminator */
 	cbWorkingDir = cbWorkingDir >= 2 ? cbWorkingDir - 2 : cbWorkingDir;

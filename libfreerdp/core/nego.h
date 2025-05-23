@@ -140,4 +140,17 @@ FREERDP_LOCAL SEC_WINNT_AUTH_IDENTITY* nego_get_identity(rdpNego* nego);
 
 FREERDP_LOCAL void nego_free_nla(rdpNego* nego);
 
+FREERDP_LOCAL UINT32 nego_get_selected_protocol(rdpNego* nego);
+FREERDP_LOCAL BOOL nego_set_selected_protocol(rdpNego* nego, UINT32 SelectedProtocol);
+
+FREERDP_LOCAL UINT32 nego_get_requested_protocols(rdpNego* nego);
+FREERDP_LOCAL BOOL nego_set_requested_protocols(rdpNego* nego, UINT32 RequestedProtocols);
+
+FREERDP_LOCAL BOOL nego_set_state(rdpNego* nego, NEGO_STATE state);
+FREERDP_LOCAL NEGO_STATE nego_get_state(rdpNego* nego);
+
+FREERDP_LOCAL SEC_WINNT_AUTH_IDENTITY* nego_get_identity(rdpNego* nego);
+
+FREERDP_LOCAL void nego_free_nla(rdpNego* nego);
+
 #endif /* FREERDP_LIB_CORE_NEGO_H */

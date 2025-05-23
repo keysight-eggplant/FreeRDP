@@ -106,6 +106,13 @@
 
 #endif
 
+#if defined(__MINGW32__)
+#define SCARD_E_PIN_CACHE_EXPIRED		((DWORD)0x80100032L)
+#define SCARD_E_NO_PIN_CACHE			((DWORD)0x80100033L)
+#define SCARD_E_READ_ONLY_CARD			((DWORD)0x80100034L)
+#define SCARD_W_CACHE_ITEM_TOO_BIG		((DWORD)0x80100072L)
+#endif
+
 #define SCARD_ATR_LENGTH 33
 
 #define SCARD_PROTOCOL_UNDEFINED 0x00000000u
@@ -808,6 +815,8 @@ extern "C"
 	                                                              LPWSTR mszReaders,
 	                                                              LPDWORD pcchReaders);
 
+	WINSCARDAPI LONG WINAPI SCardAddReaderName(HANDLE* key, LPSTR readerName);
+
 	WINSCARDAPI LONG WINAPI SCardAudit(SCARDCONTEXT hContext, DWORD dwEvent);
 
 #ifdef UNICODE
@@ -1080,6 +1089,8 @@ typedef LONG(WINAPI* fnSCardListReadersWithDeviceInstanceIdW)(SCARDCONTEXT hCont
                                                               LPWSTR mszReaders,
                                                               LPDWORD pcchReaders);
 
+typedef LONG(WINAPI* fnSCardAddReaderName)(HANDLE* key, LPSTR readerName);
+
 typedef LONG(WINAPI* fnSCardAudit)(SCARDCONTEXT hContext, DWORD dwEvent);
 
 struct _SCardApiFunctionTable
@@ -1162,6 +1173,7 @@ struct _SCardApiFunctionTable
 	fnSCardGetReaderDeviceInstanceIdW pfnSCardGetReaderDeviceInstanceIdW;
 	fnSCardListReadersWithDeviceInstanceIdA pfnSCardListReadersWithDeviceInstanceIdA;
 	fnSCardListReadersWithDeviceInstanceIdW pfnSCardListReadersWithDeviceInstanceIdW;
+	fnSCardAddReaderName pfnSCardAddReaderName;
 	fnSCardAudit pfnSCardAudit;
 };
 

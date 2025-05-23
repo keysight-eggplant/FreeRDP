@@ -1042,6 +1042,10 @@ freerdp* freerdp_new(void)
  */
 void freerdp_free(freerdp* instance)
 {
+	if (instance->saved_identity != NULL)
+	{
+		instance->saved_identity->free(instance->saved_identity);
+	}
 	free(instance);
 }
 
@@ -1141,6 +1145,16 @@ const char* freerdp_nego_get_routing_token(rdpContext* context, DWORD* length)
 		return NULL;
 
 	return (const char*)nego_get_routing_token(context->rdp->nego, length);
+}
+
+freerdp_blob* freerdp_saved_identity(freerdp* instance)
+{
+	return instance->saved_identity;
+}
+
+void freerdp_save_identity(freerdp* instance, freerdp_blob* identity)
+{
+	instance->saved_identity = identity;
 }
 
 CONNECTION_STATE freerdp_get_state(rdpContext* context)
