@@ -1066,42 +1066,6 @@ static auth_identity* nla_read_ts_creds(wStream* s, credential_type cred_type, s
 	return NULL;
 }
 
-auth_identity* nla_read_ts_credentials(PSecBuffer ts_credentials)
-{
-	auth_identity* identity = NULL;
-	wStream* s;
-	size_t length = 0;
-	size_t ts_creds_length = 0;
-	UINT32* value = NULL;
-
-	if (!ts_credentials || !ts_credentials->pvBuffer)
-		return FALSE;
-
-	s = Stream_New(ts_credentials->pvBuffer, ts_credentials->cbBuffer);
-
-	if (!s)
-	{
-		WLog_ERR(TAG, "Stream_New failed!");
-		return FALSE;
-	}
-
-	/* TSCredentials (SEQUENCE) */
-	if (ber_read_sequence_tag(s, &length) &&
-	    /* [0] credType (INTEGER) */
-	    ber_read_contextual_tag(s, 0, &length, TRUE) &&
-	    ber_read_integer(s, value) &&
-	    /* [1] credentials (OCTET STRING) */
-	    ber_read_contextual_tag(s, 1, &length, TRUE) &&
-	    ber_read_octet_string_tag(s, &ts_creds_length))
-	{
-		identity = nla_read_ts_creds(s, *value, &length);
-	}
-
-	Stream_Free(s, FALSE);
-	return identity;
-}
-
-
 size_t nla_write_ts_password_creds(SEC_WINNT_AUTH_IDENTITY* password_creds, wStream* s)
 {
 	size_t size = 0;
