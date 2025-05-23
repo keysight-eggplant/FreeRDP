@@ -815,9 +815,9 @@ extern "C"
 	                                                              LPWSTR mszReaders,
 	                                                              LPDWORD pcchReaders);
 
-	WINSCARDAPI LONG WINAPI SCardAddReaderName(HANDLE* key, LPSTR readerName);
-
 	WINSCARDAPI LONG WINAPI SCardAudit(SCARDCONTEXT hContext, DWORD dwEvent);
+
+	WINSCARDAPI LONG WINAPI SCardAddReaderName(HANDLE* key, LPSTR readerName);
 
 #ifdef UNICODE
 #define SCardListReaderGroups SCardListReaderGroupsW
@@ -1173,8 +1173,8 @@ struct _SCardApiFunctionTable
 	fnSCardGetReaderDeviceInstanceIdW pfnSCardGetReaderDeviceInstanceIdW;
 	fnSCardListReadersWithDeviceInstanceIdA pfnSCardListReadersWithDeviceInstanceIdA;
 	fnSCardListReadersWithDeviceInstanceIdW pfnSCardListReadersWithDeviceInstanceIdW;
-	fnSCardAddReaderName pfnSCardAddReaderName;
 	fnSCardAudit pfnSCardAudit;
+	fnSCardAddReaderName pfnSCardAddReaderName;
 };
 
 typedef struct _SCardApiFunctionTable SCardApiFunctionTable;
