@@ -659,25 +659,6 @@ int string_length(char* string)
 
 /* ============================================================ */
 
-size_t nla_sizeof_ts_password_creds_inner(SEC_WINNT_AUTH_IDENTITY* password_creds)
-{
-	if (password_creds == NULL)
-	{
-		return 0;
-	}
-
-	return (ber_sizeof_sequence_octet_string(password_creds->DomainLength * 2)
-	        + ber_sizeof_sequence_octet_string(password_creds->UserLength * 2)
-	        + ber_sizeof_sequence_octet_string(password_creds->PasswordLength * 2));
-}
-
-size_t nla_sizeof_ts_password_creds(SEC_WINNT_AUTH_IDENTITY* password_creds)
-{
-	size_t inner_size = nla_sizeof_ts_password_creds_inner(password_creds);
-	return ber_sizeof_sequence(inner_size);
-}
-
-
 size_t nla_sizeof_ts_cspdatadetail_inner(csp_data_detail* csp_data)
 {
 	if (csp_data == NULL)
@@ -796,12 +777,6 @@ size_t nla_sizeof_ts_credentials_inner(auth_identity* identity)
 	return (ber_sizeof_contextual_tag(ber_sizeof_integer(identity->cred_type))
 	        + ber_sizeof_integer(identity->cred_type)
 	        + ber_sizeof_sequence_octet_string(nla_sizeof_ts_creds(identity)));
-}
-
-
-size_t nla_sizeof_ts_credentials(auth_identity* identity)
-{
-	return ber_sizeof_sequence(nla_sizeof_ts_credentials_inner(identity));
 }
 
 

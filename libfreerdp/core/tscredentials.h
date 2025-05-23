@@ -115,19 +115,8 @@ const char* auth_identity_credential_type_label(auth_identity* that);
 size_t nla_sizeof_ts_creds(auth_identity* identity);
 size_t nla_write_ts_creds(auth_identity* identity, wStream* s);
 size_t nla_sizeof_ts_credentials_inner(auth_identity* identity);
-size_t nla_sizeof_ts_credentials(auth_identity* identity);
-
-#define ber_sizeof_sequence_octet_string(length) \
-	(ber_sizeof_contextual_tag(ber_sizeof_octet_string(length)) \
-	 + ber_sizeof_octet_string(length))
-
-#define ber_write_sequence_octet_string(stream, context, value, length) \
-	(ber_write_contextual_tag(stream, context, ber_sizeof_octet_string(length), TRUE) \
-	 + ber_write_octet_string(stream, value, length))
 
 /* exported for tests */
-size_t nla_sizeof_ts_password_creds_inner(SEC_WINNT_AUTH_IDENTITY* password_creds);
-size_t nla_sizeof_ts_password_creds(SEC_WINNT_AUTH_IDENTITY* password_creds);
 size_t nla_sizeof_ts_cspdatadetail_inner(csp_data_detail* csp_data);
 size_t nla_sizeof_ts_cspdatadetail(csp_data_detail*  csp_data);
 size_t nla_sizeof_ts_smartcard_creds_inner(smartcard_creds* smartcard_creds);
