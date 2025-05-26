@@ -480,16 +480,6 @@ struct _SecPkgCredentials_NamesW
 typedef struct _SecPkgCredentials_NamesW SecPkgCredentials_NamesW;
 typedef SecPkgCredentials_NamesW* PSecPkgCredentials_NamesW;
 
-#else //ndef win32
-
-#if defined(__MINGW32__)
-struct _SecPkgContext_Bindings
-{
-	UINT32 BindingsLength;
-	SEC_CHANNEL_BINDINGS* Bindings;
-};
-typedef struct _SecPkgContext_Bindings SecPkgContext_Bindings;
-#endif
 
 #endif
 
