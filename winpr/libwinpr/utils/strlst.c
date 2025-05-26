@@ -224,7 +224,7 @@ char**  string_list_split_string(const char* string, const char* separator,
 
 	extract_separated_substrings(string, separator, remove_empty_substring, result);
 
-	if (count != string_list_length(result))
+	if (count != string_list_length((const char* const*)result))
 	{
 		/* at least one of the strdup couldn't allocate */
 		string_list_free(result);
