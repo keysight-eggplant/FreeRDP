@@ -176,7 +176,6 @@ static SECURITY_STATUS nla_decrypt_public_key_hash(rdpNla* nla);
 static SECURITY_STATUS nla_encrypt_ts_credentials(rdpNla* nla);
 static SECURITY_STATUS nla_decrypt_ts_credentials(rdpNla* nla);
 static BOOL nla_read_ts_password_creds(rdpNla* nla, wStream* s);
-static void nla_identity_free(SEC_WINNT_AUTH_IDENTITY* identity);
 
 #define ber_sizeof_sequence_octet_string(length) \
 	ber_sizeof_contextual_tag(ber_sizeof_octet_string(length)) + ber_sizeof_octet_string(length)
@@ -341,39 +340,6 @@ static LPTSTR service_principal_name(const char* server_hostname)
 	free(spnA);
 	return spnX;
 }
-
-void nla_identity_free(SEC_WINNT_AUTH_IDENTITY* identity)
-{
-	if (identity)
-	{
-		/* Password authentication */
-		if (identity->User)
-		{
-			memset(identity->User, 0, identity->UserLength * 2);
-			free(identity->User);
-		}
-
-		if (identity->Password)
-		{
-			size_t len = identity->PasswordLength;
-
-			if (len > LB_PASSWORD_MAX_LENGTH) /* [pth] Password hash */
-				len -= LB_PASSWORD_MAX_LENGTH;
-
-			memset(identity->Password, 0, len * 2);
-			free(identity->Password);
-		}
-
-		if (identity->Domain)
-		{
-			memset(identity->Domain, 0, identity->DomainLength * 2);
-			free(identity->Domain);
-		}
-	}
-
-	free(identity);
-}
-
 /**
  * Initialize NTLM/Kerberos SSP authentication module (client).
  * @param credssp
@@ -480,7 +446,7 @@ static int nla_client_init(rdpNla* nla)
 
 	if (!settings->Username)
 	{
-		nla_identity_free(nla->identity);
+		auth_identity_free(nla->identity);
 		nla->identity = NULL;
 	}
 	else
@@ -488,7 +454,7 @@ static int nla_client_init(rdpNla* nla)
 		if (settings->RedirectionPassword && settings->RedirectionPasswordLength > 0)
 		{
 			if (sspi_SetAuthIdentityWithUnicodePassword(
-			        nla->identity, settings->Username, settings->Domain,
+			        nla->identity->creds->password_creds, settings->Username, settings->Domain,
 			        (UINT16*)settings->RedirectionPassword,
 			        settings->RedirectionPasswordLength / sizeof(WCHAR) - 1) < 0)
 				return -1;
@@ -503,7 +469,7 @@ static int nla_client_init(rdpNla* nla)
 				{
 					if (strlen(settings->PasswordHash) == 32)
 					{
-						if (sspi_SetAuthIdentity(nla->identity, settings->Username,
+						if (sspi_SetAuthIdentity(nla->identity->creds->password_creds, settings->Username,
 						                         settings->Domain, settings->PasswordHash) < 0)
 							return -1;
 
@@ -512,7 +478,7 @@ static int nla_client_init(rdpNla* nla)
 						 * length exceeding the maximum (LB_PASSWORD_MAX_LENGTH) and use it this for
 						 * hash identification in WinPR.
 						 */
-						nla->identity->PasswordLength += LB_PASSWORD_MAX_LENGTH;
+						nla->identity->creds->password_creds->PasswordLength += LB_PASSWORD_MAX_LENGTH;
 						usePassword = FALSE;
 					}
 				}
@@ -520,7 +486,7 @@ static int nla_client_init(rdpNla* nla)
 
 			if (usePassword)
 			{
-				if (sspi_SetAuthIdentity(nla->identity, settings->Username, settings->Domain,
+				if (sspi_SetAuthIdentity(nla->identity->creds->password_creds, settings->Username, settings->Domain,
 				                         settings->Password) < 0)
 					return -1;
 			}
@@ -2709,7 +2675,7 @@ void nla_free(rdpNla* nla)
 	sspi_SecBufferFree(&nla->PublicKey);
 	sspi_SecBufferFree(&nla->tsCredentials);
 	free(nla->ServicePrincipalName);
-	nla_identity_free(nla->identity);
+	auth_identity_free(nla->identity);
 	nla_buffer_free(nla);
 	free(nla);
 }
@@ -2719,7 +2685,7 @@ SEC_WINNT_AUTH_IDENTITY* nla_get_identity(rdpNla* nla)
 	if (!nla)
 		return NULL;
 
-	return nla->identity;
+	return nla->identity->creds->password_creds;
 }
 
 NLA_STATE nla_get_state(rdpNla* nla)
