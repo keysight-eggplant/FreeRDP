@@ -454,7 +454,7 @@ static int nla_client_init(rdpNla* nla)
 		if (settings->RedirectionPassword && settings->RedirectionPasswordLength > 0)
 		{
 			if (sspi_SetAuthIdentityWithUnicodePassword(
-			        nla->identity->creds->password_creds, settings->Username, settings->Domain,
+			        nla->identity->creds.password_creds, settings->Username, settings->Domain,
 			        (UINT16*)settings->RedirectionPassword,
 			        settings->RedirectionPasswordLength / sizeof(WCHAR) - 1) < 0)
 				return -1;
@@ -469,7 +469,7 @@ static int nla_client_init(rdpNla* nla)
 				{
 					if (strlen(settings->PasswordHash) == 32)
 					{
-						if (sspi_SetAuthIdentity(nla->identity->creds->password_creds, settings->Username,
+						if (sspi_SetAuthIdentity(nla->identity->creds.password_creds, settings->Username,
 						                         settings->Domain, settings->PasswordHash) < 0)
 							return -1;
 
@@ -478,7 +478,7 @@ static int nla_client_init(rdpNla* nla)
 						 * length exceeding the maximum (LB_PASSWORD_MAX_LENGTH) and use it this for
 						 * hash identification in WinPR.
 						 */
-						nla->identity->creds->password_creds->PasswordLength += LB_PASSWORD_MAX_LENGTH;
+						nla->identity->creds.password_creds->PasswordLength += LB_PASSWORD_MAX_LENGTH;
 						usePassword = FALSE;
 					}
 				}
@@ -486,7 +486,7 @@ static int nla_client_init(rdpNla* nla)
 
 			if (usePassword)
 			{
-				if (sspi_SetAuthIdentity(nla->identity->creds->password_creds, settings->Username, settings->Domain,
+				if (sspi_SetAuthIdentity(nla->identity->creds.password_creds, settings->Username, settings->Domain,
 				                         settings->Password) < 0)
 					return -1;
 			}
@@ -2685,7 +2685,7 @@ SEC_WINNT_AUTH_IDENTITY* nla_get_identity(rdpNla* nla)
 	if (!nla)
 		return NULL;
 
-	return nla->identity->creds->password_creds;
+	return nla->identity->creds.password_creds;
 }
 
 NLA_STATE nla_get_state(rdpNla* nla)
