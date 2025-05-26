@@ -33,7 +33,6 @@ extern "C"
 	WINPR_API int string_list_length(const char* const* string_list);
 	WINPR_API char** string_list_copy(const char* const* string_list);
 	WINPR_API void string_list_print(FILE* out, const char* const* string_list);
-	WINPR_API char* string_list_join(char** string_list, const char* separator);
 	WINPR_API char* string_concatenate(const char* string, ...);
 	WINPR_API char** string_list_split_string(const char* string, const char* separator, int remove_empty_substrings);
 	WINPR_API int string_list_mismatch(char** a, char** b);
