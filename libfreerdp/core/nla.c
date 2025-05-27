@@ -55,6 +55,19 @@
 
 #define SERVER_KEY "Software\\" FREERDP_VENDOR_STRING "\\" FREERDP_PRODUCT_STRING "\\Server"
 
+#define CHECK_MEMORY(pointer, result, description, ...)                 \
+	do                                                              \
+	{                                                               \
+		if (!(pointer))						\
+		{                                                       \
+			WLog_ERR(TAG, "%s:%d: %s() "  description,	\
+			         __FILE__, __LINE__, __FUNCTION__,	\
+			         ## __VA_ARGS__);			\
+			return result;                                  \
+		}                                                       \
+	}while (0)
+
+
 typedef struct
 {
 	UINT32 KeySpec;
@@ -1360,18 +1373,6 @@ size_t nla_write_ts_creds(auth_identity* identity, wStream* s)
 			return 0;
 	}
 }
-
-#define CHECK_MEMORY(pointer, result, description, ...)                 \
-	do                                                              \
-	{                                                               \
-		if (!(pointer))						\
-		{                                                       \
-			WLog_ERR(TAG, "%s:%d: %s() "  description,	\
-			         __FILE__, __LINE__, __FUNCTION__,	\
-			         ## __VA_ARGS__);			\
-			return result;                                  \
-		}                                                       \
-	}while (0)
 
 /* ============================================================ */
 
