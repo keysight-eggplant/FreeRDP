@@ -51,6 +51,57 @@
 #include "smartcard-windows.h"
 #endif
 
+typedef struct
+{
+	UINT32 KeySpec;
+	char* CardName;
+	char* ReaderName;
+	char* ContainerName;
+	char* CspName;
+} csp_data_detail;
+
+typedef struct
+{
+	char* Pin;
+	char* UserHint;   /* OPTIONAL */
+	char* DomainHint; /* OPTIONAL */
+	csp_data_detail* csp_data;
+} smartcard_creds;
+
+typedef struct
+{
+	char*    package_name;
+	unsigned credential_size;
+	BYTE*    credential;
+} remote_guard_package_cred;
+
+typedef struct
+{
+	remote_guard_package_cred*  login_cred;
+	unsigned                    supplemental_creds_count;
+	remote_guard_package_cred** supplemental_creds;
+} remote_guard_creds;
+
+typedef enum
+{
+	credential_type_password = 1,
+	credential_type_smartcard = 2,
+	credential_type_remote_guard = 6,
+	credential_type_default = credential_type_password,
+} credential_type;
+
+typedef struct
+{
+	credential_type          cred_type;
+	union
+	{
+		SEC_WINNT_AUTH_IDENTITY* password_creds;
+		smartcard_creds*         smartcard_creds;
+		remote_guard_creds*      remote_guard_creds;
+	} creds;
+} auth_identity;
+
+
 #define TAG FREERDP_TAG("core.nla")
 
 #define SERVER_KEY "Software\\" FREERDP_VENDOR_STRING "\\" FREERDP_PRODUCT_STRING "\\Server"
@@ -139,57 +190,6 @@ size_t nla_write_ts_remote_guard_creds(remote_guard_creds*  remote_guard_creds, 
 			return result;                                  \
 		}                                                       \
 	}while (0)
-
-
-typedef struct
-{
-	UINT32 KeySpec;
-	char* CardName;
-	char* ReaderName;
-	char* ContainerName;
-	char* CspName;
-} csp_data_detail;
-
-typedef struct
-{
-	char* Pin;
-	char* UserHint;   /* OPTIONAL */
-	char* DomainHint; /* OPTIONAL */
-	csp_data_detail* csp_data;
-} smartcard_creds;
-
-typedef struct
-{
-	char*    package_name;
-	unsigned credential_size;
-	BYTE*    credential;
-} remote_guard_package_cred;
-
-typedef struct
-{
-	remote_guard_package_cred*  login_cred;
-	unsigned                    supplemental_creds_count;
-	remote_guard_package_cred** supplemental_creds;
-} remote_guard_creds;
-
-typedef enum
-{
-	credential_type_password = 1,
-	credential_type_smartcard = 2,
-	credential_type_remote_guard = 6,
-	credential_type_default = credential_type_password,
-} credential_type;
-
-typedef struct
-{
-	credential_type          cred_type;
-	union
-	{
-		SEC_WINNT_AUTH_IDENTITY* password_creds;
-		smartcard_creds*         smartcard_creds;
-		remote_guard_creds*      remote_guard_creds;
-	} creds;
-} auth_identity;
 
 /**
  * TSRequest ::= SEQUENCE {
