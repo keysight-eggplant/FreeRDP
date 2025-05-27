@@ -1094,15 +1094,18 @@ static SEC_WINNT_AUTH_IDENTITY* nla_read_ts_sc_password_creds(wStream* s, size_t
 
 	password_creds = SEC_WINNT_AUTH_IDENTITY_new(NULL, NULL, NULL);
 
+	UINT32 domainLength = password_creds->DomainLength;
+	UINT32 userLength = password_creds->UserLength;
+	UINT32 passwordLength = password_creds->PasswordLength;
 	if (nla_read_octet_string_field(s, "[0] domainName (OCTET STRING)", 0,
 	                                &password_creds->Domain,
-	                                &password_creds->DomainLength) &&
+	                                &domainLength) &&
 	    nla_read_octet_string_field(s, "[1] userName (OCTET STRING)", 1,
 	                                &password_creds->User,
-	                                &password_creds->UserLength) &&
+	                                &userLength) &&
 	    nla_read_octet_string_field(s, "[2] password (OCTET STRING)", 2,
 	                                &password_creds->Password,
-	                                &password_creds->PasswordLength))
+	                                &PasswordLength))
 	{
 		return password_creds;
 	}
