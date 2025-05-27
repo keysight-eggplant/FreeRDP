@@ -1456,7 +1456,7 @@ size_t nla_write_ts_remote_guard_creds(remote_guard_creds*  remote_guard_creds, 
 static size_t nla_write_ts_password_creds(rdpNla* nla, wStream* s)
 {
 	size_t size = 0;
-	size_t innerSize = nla_sizeof_ts_password_creds(nla);
+	size_t innerSize = nla_sizeof_ts_password_creds(nla->identity->creds.password_creds);
 	/* TSPasswordCreds (SEQUENCE) */
 	size += ber_write_sequence_tag(s, innerSize);
 
@@ -2979,7 +2979,7 @@ static size_t nla_sizeof_ts_credentials(rdpNla* nla)
 	size += ber_sizeof_integer(1);
 	size += ber_sizeof_contextual_tag(ber_sizeof_integer(1));
 	size +=
-	    ber_sizeof_sequence_octet_string(ber_sizeof_sequence(nla_sizeof_ts_password_creds(nla)));
+	    ber_sizeof_sequence_octet_string(ber_sizeof_sequence(nla_sizeof_ts_password_creds(nla->identity->creds.password_creds)));
 	return size;
 }
 
@@ -3115,7 +3115,7 @@ static size_t nla_write_ts_credentials(rdpNla* nla, wStream* s)
 	size += ber_write_contextual_tag(s, 0, ber_sizeof_integer(1), TRUE);
 	size += ber_write_integer(s, 1);
 	/* [1] credentials (OCTET STRING) */
-	passwordSize = ber_sizeof_sequence(nla_sizeof_ts_password_creds(nla));
+	passwordSize = ber_sizeof_sequence(nla_sizeof_ts_password_creds(nla->identity->creds.password_creds));
 	size += ber_write_contextual_tag(s, 1, ber_sizeof_octet_string(passwordSize), TRUE);
 	size += ber_write_octet_string_tag(s, passwordSize);
 	size += nla_write_ts_password_creds(nla, s);
