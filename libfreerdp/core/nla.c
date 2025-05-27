@@ -3118,7 +3118,7 @@ static size_t nla_write_ts_credentials(rdpNla* nla, wStream* s)
 	passwordSize = ber_sizeof_sequence(nla_sizeof_ts_password_creds(nla->identity->creds.password_creds));
 	size += ber_write_contextual_tag(s, 1, ber_sizeof_octet_string(passwordSize), TRUE);
 	size += ber_write_octet_string_tag(s, passwordSize);
-	size += nla_write_ts_password_creds(nla, s);
+	size += nla_write_ts_password_creds(nla->identity->creds.password_creds, s);
 	return size;
 }
 
