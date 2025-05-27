@@ -1105,7 +1105,7 @@ static SEC_WINNT_AUTH_IDENTITY* nla_read_ts_sc_password_creds(wStream* s, size_t
 	                                &userLength) &&
 	    nla_read_octet_string_field(s, "[2] password (OCTET STRING)", 2,
 	                                &password_creds->Password,
-	                                &PasswordLength))
+	                                &passwordLength))
 	{
 		return password_creds;
 	}
