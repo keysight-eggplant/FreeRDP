@@ -1034,15 +1034,15 @@ size_t nla_sizeof_ts_remote_guard_creds(remote_guard_creds* remote_guard_creds)
 	return ber_sizeof_sequence(nla_sizeof_ts_remote_guard_creds_inner(remote_guard_creds));
 }
 
-static size_t nla_sizeof_ts_password_creds(rdpNla* nla)
+static size_t nla_sizeof_ts_password_creds(SEC_WINNT_AUTH_IDENTITY* identity)
 {
 	size_t length = 0;
 
-	if (nla->identity->creds.password_creds)
+	if (identity->creds.password_creds)
 	{
-		length += ber_sizeof_sequence_octet_string(nla->identity->creds.password_creds->DomainLength * 2);
-		length += ber_sizeof_sequence_octet_string(nla->identity->creds.password_creds->UserLength * 2);
-		length += ber_sizeof_sequence_octet_string(nla->identity->creds.password_creds->PasswordLength * 2);
+		length += ber_sizeof_sequence_octet_string(identity->creds.password_creds->DomainLength * 2);
+		length += ber_sizeof_sequence_octet_string(identity->creds.password_creds->UserLength * 2);
+		length += ber_sizeof_sequence_octet_string(identity->creds.password_creds->PasswordLength * 2);
 	}
 
 	return length;
