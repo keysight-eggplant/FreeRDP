@@ -310,7 +310,7 @@ static SECURITY_STATUS nla_decrypt_public_key_echo(rdpNla* nla);
 static SECURITY_STATUS nla_decrypt_public_key_hash(rdpNla* nla);
 static SECURITY_STATUS nla_encrypt_ts_credentials(rdpNla* nla);
 static SECURITY_STATUS nla_decrypt_ts_credentials(rdpNla* nla);
-static BOOL nla_read_ts_password_creds(rdpNla* nla, wStream* s);
+static BOOL nla_read_ts_sc_password_creds(rdpNla* nla, wStream* s);
 
 
 
@@ -1075,7 +1075,7 @@ size_t nla_sizeof_ts_credentials_inner(auth_identity* identity)
 }
 
 
-static SEC_WINNT_AUTH_IDENTITY* nla_read_ts_password_creds(wStream* s, size_t* length)
+static SEC_WINNT_AUTH_IDENTITY* nla_read_ts_sc_password_creds(wStream* s, size_t* length)
 {
 	SEC_WINNT_AUTH_IDENTITY* password_creds = NULL;
 
@@ -1297,7 +1297,7 @@ static auth_identity* nla_read_ts_creds(wStream* s, credential_type cred_type, s
 	switch (cred_type)
 	{
 		case credential_type_password:
-			if ((password_creds = nla_read_ts_password_creds(s, length)) != NULL)
+			if ((password_creds = nla_read_ts_sc_password_creds(s, length)) != NULL)
 			{
 				identity = auth_identity_new_password(password_creds);
 			}
