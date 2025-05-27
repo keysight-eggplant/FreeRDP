@@ -3158,7 +3158,7 @@ LONG smartcard_pack_transmit_return(SMARTCARD_DEVICE* smartcard, wStream* s,
 	if (!Stream_EnsureRemainingCapacity(s, 4))
 		return SCARD_E_NO_MEMORY;
 	Stream_Write_UINT32(s, cbRecvLength); /* cbRecvLength (4 bytes) */
-	if (!smartcard_ndr_pointer_write(s, (UINt32 *)&index, cbRecvLength))
+	if (!smartcard_ndr_pointer_write(s, (UINT32 *)&index, cbRecvLength))
 		return SCARD_E_NO_MEMORY;
 
 	if (ret->pioRecvPci)
