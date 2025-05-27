@@ -45,6 +45,7 @@
 
 #include "compatibility.h"
 #include "cmdline.h"
+#include <assert.h>
 
 #include <freerdp/log.h>
 
@@ -3482,10 +3483,10 @@ int freerdp_client_settings_parse_command_line_arguments(rdpSettings* settings, 
 		{
 			settings->FIPSMode = enable;
 		}
-				CommandLineSwitchCase(arg, "smartcard-logon")
+		CommandLineSwitchCase(arg, "smartcard-logon")
 		{
 			if (!settings->SmartcardLogon)
-				activate_smartcard_logon(settings);
+				activate_smartcard_logon_rdp(settings);
 		}
 		// ***** START EggplantSoftware Specific Smart Card Options *****
 		CommandLineSwitchCase(arg, "cross-domain-logon")
