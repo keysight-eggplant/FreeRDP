@@ -2713,7 +2713,7 @@ BOOL nla_set_service_principal(rdpNla* nla, LPSTR principal)
 	if (!nla || !principal)
 		return FALSE;
 
-	nla->ServicePrincipalName = principal;
+	nla->ServicePrincipalName = (LPTSTR)principal;
 	return TRUE;
 }
 
