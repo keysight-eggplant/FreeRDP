@@ -453,7 +453,7 @@ BOOL drive_file_seek(DRIVE_FILE* file, UINT64 Offset)
 
 BOOL drive_file_read(DRIVE_FILE* file, BYTE* buffer, UINT32* Length)
 {
-	UINT32 read;
+	LPDWORD read;
 
 	if (!file || !buffer || !Length)
 		return FALSE;
@@ -471,7 +471,7 @@ BOOL drive_file_read(DRIVE_FILE* file, BYTE* buffer, UINT32* Length)
 
 BOOL drive_file_write(DRIVE_FILE* file, BYTE* buffer, UINT32 Length)
 {
-	UINT32 written;
+	LPDWORD written;
 
 	if (!file || !buffer)
 		return FALSE;
