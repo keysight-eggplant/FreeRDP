@@ -329,6 +329,19 @@ static void* memdup(void* source, size_t size)
 
 
 /* ============================================================ */
+#define CHECK_MEMORY_SC(pointer, error_action)                             \
+	do								\
+	{								\
+		if (!(pointer))						\
+		{							\
+			WLog_ERR(TAG, "%s:%d: out of memory",		\
+			         __FUNCTION__, __LINE__);		\
+			error_action;					\
+		}							\
+	}while (0)
+
+
+/* ============================================================ */
 
 /* SEC_WINNT_AUTH_IDENTITY contains only UTF-16 strings,  with length fields. */
 #define WSTRING_LENGTH_CLEAR_AND_FREE(structure, field)				\
@@ -347,7 +360,7 @@ SEC_WINNT_AUTH_IDENTITY* SEC_WINNT_AUTH_IDENTITY_new(char* user,  char* password
         char* domain)
 {
 	SEC_WINNT_AUTH_IDENTITY* password_creds;
-	CHECK_MEMORY(password_creds = malloc(sizeof(*password_creds)), return NULL);
+	CHECK_MEMORY_SC(password_creds = malloc(sizeof(*password_creds)), return NULL);
 	password_creds->Flags = SEC_WINNT_AUTH_IDENTITY_UNICODE;
 	WSTRING_LENGTH_SET_CSTRING(password_creds, User, user);
 	WSTRING_LENGTH_SET_CSTRING(password_creds, Domain, domain);
@@ -358,7 +371,7 @@ SEC_WINNT_AUTH_IDENTITY* SEC_WINNT_AUTH_IDENTITY_new(char* user,  char* password
 SEC_WINNT_AUTH_IDENTITY* SEC_WINNT_AUTH_IDENTITY_deepcopy(SEC_WINNT_AUTH_IDENTITY* original)
 {
 	SEC_WINNT_AUTH_IDENTITY* copy;
-	CHECK_MEMORY(copy = calloc(1, sizeof(*copy)), return NULL);
+	CHECK_MEMORY_SC(copy = calloc(1, sizeof(*copy)), return NULL);
 	copy->Flags = SEC_WINNT_AUTH_IDENTITY_UNICODE;
 	WSTRING_LENGTH_COPY(original, copy, User);
 	WSTRING_LENGTH_COPY(original, copy, Domain);
@@ -399,7 +412,7 @@ csp_data_detail* csp_data_detail_new_nocopy(UINT32 KeySpec,
         char* CspName)
 {
 	csp_data_detail* csp;
-	CHECK_MEMORY(csp = malloc(sizeof(*csp)), return NULL);
+	CHECK_MEMORY_SC(csp = malloc(sizeof(*csp)), return NULL);
 	csp->KeySpec = KeySpec;
 	csp->CardName = CardName;
 	csp->ReaderName = ReaderName;
@@ -462,7 +475,7 @@ smartcard_creds* smartcard_creds_new_nocopy(char* Pin, char* UserHint, char* Dom
         csp_data_detail* csp_data)
 {
 	smartcard_creds* that;
-	CHECK_MEMORY(that = malloc(sizeof(*that)), return NULL);
+	CHECK_MEMORY_SC(that = malloc(sizeof(*that)), return NULL);
 	that->Pin = Pin;
 	that->UserHint = UserHint;
 	that->DomainHint = DomainHint;
@@ -521,7 +534,7 @@ remote_guard_package_cred* remote_guard_package_cred_new_nocopy(char* package_na
         BYTE*    credential)
 {
 	remote_guard_package_cred* that;
-	CHECK_MEMORY(that = malloc(sizeof(*that)), return NULL);
+	CHECK_MEMORY_SC(that = malloc(sizeof(*that)), return NULL);
 	that->package_name = package_name;
 	that->credential_size = credential_size;
 	that->credential = credential;
@@ -545,7 +558,7 @@ remote_guard_package_cred* remote_guard_package_cred_deepcopy(remote_guard_packa
         that)
 {
 	remote_guard_package_cred* copy;
-	CHECK_MEMORY(copy = malloc(sizeof(*copy)), return NULL);
+	CHECK_MEMORY_SC(copy = malloc(sizeof(*copy)), return NULL);
 	copy->package_name = strdup(that->package_name);
 	copy->credential_size = that->credential_size;
 	copy->credential = memdup(that->credential, that->credential_size);
@@ -553,7 +566,7 @@ remote_guard_package_cred* remote_guard_package_cred_deepcopy(remote_guard_packa
 	if ((copy->package_name == NULL) || (copy->credential == NULL))
 	{
 		remote_guard_package_cred_free(copy);
-		CHECK_MEMORY(NULL, return NULL);
+		CHECK_MEMORY_SC(NULL, return NULL);
 	}
 
 	return copy;
@@ -564,7 +577,7 @@ remote_guard_package_cred* remote_guard_package_cred_deepcopy(remote_guard_packa
 remote_guard_creds* remote_guard_creds_new_logon_cred(remote_guard_package_cred* logon_cred)
 {
 	remote_guard_creds* that;
-	CHECK_MEMORY(that = malloc(sizeof(*that)), return NULL);
+	CHECK_MEMORY_SC(that = malloc(sizeof(*that)), return NULL);
 	that->login_cred = logon_cred;
 	that->supplemental_creds_count = 0;
 	that->supplemental_creds = NULL;
@@ -577,7 +590,7 @@ remote_guard_creds* remote_guard_creds_new_nocopy(char* package_name,
 {
 	remote_guard_package_cred* logon_cred = remote_guard_package_cred_new_nocopy(package_name,
 	                                        credenial_size, credential);
-	CHECK_MEMORY(logon_cred, return NULL);
+	CHECK_MEMORY_SC(logon_cred, return NULL);
 	return remote_guard_creds_new_logon_cred(logon_cred);
 }
 
@@ -586,7 +599,7 @@ void remote_guard_creds_add_supplemental_cred(remote_guard_creds* that,
 {
 	remote_guard_package_cred** new_creds = realloc(that->supplemental_creds,
 	                                        (that->supplemental_creds_count + 1) * sizeof(that->supplemental_creds[0]));
-	CHECK_MEMORY(new_creds, return);
+	CHECK_MEMORY_SC(new_creds, return);
 	new_creds[that->supplemental_creds_count] = supplemental_cred;
 	that->supplemental_creds = new_creds;
 	that->supplemental_creds_count++;
@@ -596,7 +609,7 @@ remote_guard_creds* remote_guard_creds_deepcopy(remote_guard_creds* that)
 {
 	unsigned i;
 	remote_guard_creds* copy;
-	CHECK_MEMORY(copy = malloc(sizeof(*copy)), return NULL);
+	CHECK_MEMORY_SC(copy = malloc(sizeof(*copy)), return NULL);
 	copy->login_cred = remote_guard_package_cred_deepcopy(that->login_cred);
 	copy->supplemental_creds_count = that->supplemental_creds_count;
 	copy->supplemental_creds = malloc(copy->supplemental_creds_count * sizeof(
@@ -616,7 +629,7 @@ remote_guard_creds* remote_guard_creds_deepcopy(remote_guard_creds* that)
 	    || (i < copy->supplemental_creds_count))
 	{
 		remote_guard_creds_free(copy);
-		CHECK_MEMORY(NULL, return NULL);
+		CHECK_MEMORY_SC(NULL, return NULL);
 	}
 
 	return copy;
@@ -647,7 +660,7 @@ void remote_guard_creds_free(remote_guard_creds* that)
 auth_identity* auth_identity_new_password(SEC_WINNT_AUTH_IDENTITY* password_creds)
 {
 	auth_identity* that;
-	CHECK_MEMORY(that = malloc(sizeof(*that)), return NULL);
+	CHECK_MEMORY_SC(that = malloc(sizeof(*that)), return NULL);
 	that->cred_type = credential_type_password;
 	that->creds.password_creds = password_creds;
 	return that;
@@ -656,7 +669,7 @@ auth_identity* auth_identity_new_password(SEC_WINNT_AUTH_IDENTITY* password_cred
 auth_identity* auth_identity_new_smartcard(smartcard_creds* smartcard_creds)
 {
 	auth_identity* that;
-	CHECK_MEMORY(that = malloc(sizeof(*that)), return NULL);
+	CHECK_MEMORY_SC(that = malloc(sizeof(*that)), return NULL);
 	that->cred_type = credential_type_smartcard;
 	that->creds.smartcard_creds = smartcard_creds;
 	return that;
@@ -665,7 +678,7 @@ auth_identity* auth_identity_new_smartcard(smartcard_creds* smartcard_creds)
 auth_identity* auth_identity_new_remote_guard(remote_guard_creds* remote_guard_creds)
 {
 	auth_identity* that;
-	CHECK_MEMORY(that = malloc(sizeof(*that)), return NULL);
+	CHECK_MEMORY_SC(that = malloc(sizeof(*that)), return NULL);
 	that->cred_type = credential_type_remote_guard;
 	that->creds.remote_guard_creds = remote_guard_creds;
 	return that;
@@ -769,11 +782,11 @@ static BOOL nla_read_octet_string(wStream* s, const char* field_name,
 
 	if (length == 0)
 	{
-		CHECK_MEMORY((*field) = calloc(1, 2), return FALSE);
+		CHECK_MEMORY_SC((*field) = calloc(1, 2), return FALSE);
 	}
 	else
 	{
-		CHECK_MEMORY((*field) = malloc(length), return FALSE);
+		CHECK_MEMORY_SC((*field) = malloc(length), return FALSE);
 		CopyMemory((*field), Stream_Pointer(s), length);
 		Stream_Seek(s, length);
 	}
@@ -1041,7 +1054,7 @@ static csp_data_detail* nla_read_ts_cspdatadetail(wStream* s, size_t* length)
 		return NULL;
 	}
 
-	CHECK_MEMORY((csp_data = csp_data_detail_new_nocopy(key_spec, NULL, NULL, NULL, NULL)) == NULL,
+	CHECK_MEMORY_SC((csp_data = csp_data_detail_new_nocopy(key_spec, NULL, NULL, NULL, NULL)) == NULL,
 	             return NULL);
 
 	if (nla_read_octet_string_string(s, "[1] cardName (OCTET STRING)", 1,
@@ -1078,7 +1091,7 @@ static smartcard_creds* nla_read_ts_smartcard_creds(wStream* s, size_t* length)
 		return NULL;
 	}
 
-	CHECK_MEMORY((smartcard_creds = smartcard_creds_new_nocopy(NULL, NULL, NULL, NULL)), return NULL);
+	CHECK_MEMORY_SC((smartcard_creds = smartcard_creds_new_nocopy(NULL, NULL, NULL, NULL)), return NULL);
 
 	if (nla_read_octet_string_string(s, "[0] Pin (OCTET STRING)", 0,
 	                                 &smartcard_creds->Pin))
@@ -1135,7 +1148,7 @@ static remote_guard_package_cred* nla_read_ts_remote_guard_package_cred(wStream*
 	{
 		free(package_name);
 		free(cred_buffer);
-		CHECK_MEMORY(NULL, return NULL);
+		CHECK_MEMORY_SC(NULL, return NULL);
 	}
 
 	return package_cred;
