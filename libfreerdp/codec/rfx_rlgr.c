@@ -123,7 +123,7 @@ static INLINE UINT32 lzcnt_s(UINT32 x)
 		return n - x;
 	}
 
-	return __lzcnt(x);
+	return __lzcnt64(x);
 }
 
 int rfx_rlgr_decode(RLGR_MODE mode, const BYTE* pSrcData, UINT32 SrcSize, INT16* pDstData,
