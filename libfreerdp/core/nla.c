@@ -1692,11 +1692,11 @@ static size_t nla_sizeof_ts_password_creds(rdpNla* nla)
 {
 	size_t length = 0;
 
-	if (nla->identity)
+	if (nla->identity->creds.password_creds)
 	{
-		length += ber_sizeof_sequence_octet_string(nla->identity->DomainLength * 2);
-		length += ber_sizeof_sequence_octet_string(nla->identity->UserLength * 2);
-		length += ber_sizeof_sequence_octet_string(nla->identity->PasswordLength * 2);
+		length += ber_sizeof_sequence_octet_string(nla->identity->creds.password_creds->DomainLength * 2);
+		length += ber_sizeof_sequence_octet_string(nla->identity->creds.password_creds->UserLength * 2);
+		length += ber_sizeof_sequence_octet_string(nla->identity->creds.password_creds->PasswordLength * 2);
 	}
 
 	return length;
@@ -1716,21 +1716,21 @@ BOOL nla_read_ts_password_creds(rdpNla* nla, wStream* s)
 {
 	size_t length;
 
-	if (!nla->identity)
+	if (!nla->identity->creds.password_creds)
 	{
-		WLog_ERR(TAG, "nla->identity is NULL!");
+		WLog_ERR(TAG, "nla->identity->creds.password_creds is NULL!");
 		return FALSE;
 	}
 
 	/* TSPasswordCreds (SEQUENCE)
 	 * Initialise to default values. */
-	nla->identity->Flags = SEC_WINNT_AUTH_IDENTITY_UNICODE;
-	nla->identity->UserLength = (UINT32)0;
-	nla->identity->User = NULL;
-	nla->identity->DomainLength = (UINT32)0;
-	nla->identity->Domain = NULL;
-	nla->identity->Password = NULL;
-	nla->identity->PasswordLength = (UINT32)0;
+	nla->identity->creds.password_creds->Flags = SEC_WINNT_AUTH_IDENTITY_UNICODE;
+	nla->identity->creds.password_creds->UserLength = (UINT32)0;
+	nla->identity->creds.password_creds->User = NULL;
+	nla->identity->creds.password_creds->DomainLength = (UINT32)0;
+	nla->identity->creds.password_creds->Domain = NULL;
+	nla->identity->creds.password_creds->Password = NULL;
+	nla->identity->creds.password_creds->PasswordLength = (UINT32)0;
 
 	if (!ber_read_sequence_tag(s, &length))
 		return FALSE;
@@ -1746,18 +1746,18 @@ BOOL nla_read_ts_password_creds(rdpNla* nla, wStream* s)
 		return FALSE;
 	}
 
-	nla->identity->DomainLength = (UINT32)length;
+	nla->identity->creds.password_creds->DomainLength = (UINT32)length;
 
-	if (nla->identity->DomainLength > 0)
+	if (nla->identity->creds.password_creds->DomainLength > 0)
 	{
-		nla->identity->Domain = (UINT16*)malloc(length);
+		nla->identity->creds.password_creds->Domain = (UINT16*)malloc(length);
 
-		if (!nla->identity->Domain)
+		if (!nla->identity->creds.password_creds->Domain)
 			return FALSE;
 
-		CopyMemory(nla->identity->Domain, Stream_Pointer(s), nla->identity->DomainLength);
-		Stream_Seek(s, nla->identity->DomainLength);
-		nla->identity->DomainLength /= 2;
+		CopyMemory(nla->identity->creds.password_creds->Domain, Stream_Pointer(s), nla->identity->creds.password_creds->DomainLength);
+		Stream_Seek(s, nla->identity->creds.password_creds->DomainLength);
+		nla->identity->creds.password_creds->DomainLength /= 2;
 	}
 
 	/* [1] userName (OCTET STRING) */
@@ -1766,18 +1766,18 @@ BOOL nla_read_ts_password_creds(rdpNla* nla, wStream* s)
 		return FALSE;
 	}
 
-	nla->identity->UserLength = (UINT32)length;
+	nla->identity->creds.password_creds->UserLength = (UINT32)length;
 
-	if (nla->identity->UserLength > 0)
+	if (nla->identity->creds.password_creds->UserLength > 0)
 	{
-		nla->identity->User = (UINT16*)malloc(length);
+		nla->identity->creds.password_creds->User = (UINT16*)malloc(length);
 
-		if (!nla->identity->User)
+		if (!nla->identity->creds.password_creds->User)
 			return FALSE;
 
-		CopyMemory(nla->identity->User, Stream_Pointer(s), nla->identity->UserLength);
-		Stream_Seek(s, nla->identity->UserLength);
-		nla->identity->UserLength /= 2;
+		CopyMemory(nla->identity->creds.password_creds->User, Stream_Pointer(s), nla->identity->creds.password_creds->UserLength);
+		Stream_Seek(s, nla->identity->creds.password_creds->UserLength);
+		nla->identity->creds.password_creds->UserLength /= 2;
 	}
 
 	/* [2] password (OCTET STRING) */
@@ -1786,11 +1786,11 @@ BOOL nla_read_ts_password_creds(rdpNla* nla, wStream* s)
 		return FALSE;
 	}
 
-	nla->identity->PasswordLength = (UINT32)length;
+	nla->identity->creds.password_creds->PasswordLength = (UINT32)length;
 
-	if (nla->identity->PasswordLength > 0)
+	if (nla->identity->creds.password_creds->PasswordLength > 0)
 	{
-		nla->identity->Password = (UINT16*)malloc(length);
+		nla->identity->creds.password_creds->Password = (UINT16*)malloc(length);
 
 		if (!nla->identity->creds.password_creds->Password)
 			return FALSE;
@@ -1887,7 +1887,7 @@ static BOOL nla_encode_ts_credentials(rdpNla* nla)
 	int UserLength = 0;
 	int PasswordLength = 0;
 
-	if (nla->identity)
+	if (nla->identity->creds.password_creds)
 	{
 		/* TSPasswordCreds */
 		DomainLength = nla->identity->creds.password_creds->DomainLength;
@@ -1927,7 +1927,7 @@ static BOOL nla_encode_ts_credentials(rdpNla* nla)
 		/* TSPasswordCreds */
 		nla->identity->creds.password_creds->DomainLength = DomainLength;
 		nla->identity->creds.password_creds->UserLength = UserLength;
-		nla->identity->->creds.password_creds->PasswordLength = PasswordLength;
+		nla->identity->creds.password_creds->PasswordLength = PasswordLength;
 	}
 
 	Stream_Free(s, FALSE);
