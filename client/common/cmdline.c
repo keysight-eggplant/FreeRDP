@@ -1724,6 +1724,17 @@ static BOOL parseSizeValue(const char* input, unsigned long* v1, unsigned long* 
 	return TRUE;
 }
 
+#define CHECK_MEMORY(pointer)				      \
+	do                                                    \
+	{                                                     \
+		if (!(pointer))				      \
+		{                                             \
+			WLog_ERR(TAG, "%s:%d: out of memory", \
+			         __FUNCTION__, __LINE__);      \
+			return COMMAND_LINE_ERROR_MEMORY;     \
+		}                                             \
+	}while (0)
+
 static BOOL prepare_default_settings(rdpSettings* settings, const COMMAND_LINE_ARGUMENT_A* args,
                                      BOOL rdp_file)
 {
