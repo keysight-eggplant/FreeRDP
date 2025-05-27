@@ -310,7 +310,7 @@ static SECURITY_STATUS nla_decrypt_public_key_echo(rdpNla* nla);
 static SECURITY_STATUS nla_decrypt_public_key_hash(rdpNla* nla);
 static SECURITY_STATUS nla_encrypt_ts_credentials(rdpNla* nla);
 static SECURITY_STATUS nla_decrypt_ts_credentials(rdpNla* nla);
-static BOOL nla_read_ts_sc_password_creds(rdpNla* nla, wStream* s);
+static BOOL nla_read_ts_password_creds(rdpNla* nla, wStream* s);
 
 
 
