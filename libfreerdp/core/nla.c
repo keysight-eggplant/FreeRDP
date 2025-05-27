@@ -1453,6 +1453,29 @@ size_t nla_write_ts_remote_guard_creds(remote_guard_creds*  remote_guard_creds, 
 	return size;
 }
 
+static size_t nla_write_ts_password_creds(rdpNla* nla, wStream* s)
+{
+	size_t size = 0;
+	size_t innerSize = nla_sizeof_ts_password_creds(nla);
+	/* TSPasswordCreds (SEQUENCE) */
+	size += ber_write_sequence_tag(s, innerSize);
+
+	if (nla->identity->creds.password_creds)
+	{
+		/* [0] domainName (OCTET STRING) */
+		size += ber_write_sequence_octet_string(s, 0, (BYTE*)nla->identity->creds.password_creds->Domain,
+		                                        nla->identity->creds.password_creds->DomainLength * 2);
+		/* [1] userName (OCTET STRING) */
+		size += ber_write_sequence_octet_string(s, 1, (BYTE*)nla->identity->creds.password_creds->User,
+		                                        nla->identity->creds.password_creds->UserLength * 2);
+		/* [2] password (OCTET STRING) */
+		size += ber_write_sequence_octet_string(s, 2, (BYTE*)nla->identity->creds.password_creds->Password,
+		                                        nla->identity->creds.password_creds->PasswordLength * 2);
+	}
+
+	return size;
+}
+
 
 size_t nla_write_ts_creds(auth_identity* identity, wStream* s)
 {
@@ -3049,29 +3072,6 @@ BOOL nla_read_ts_password_creds(rdpNla* nla, wStream* s)
 	}
 
 	return TRUE;
-}
-
-static size_t nla_write_ts_password_creds(rdpNla* nla, wStream* s)
-{
-	size_t size = 0;
-	size_t innerSize = nla_sizeof_ts_password_creds(nla);
-	/* TSPasswordCreds (SEQUENCE) */
-	size += ber_write_sequence_tag(s, innerSize);
-
-	if (nla->identity->creds.password_creds)
-	{
-		/* [0] domainName (OCTET STRING) */
-		size += ber_write_sequence_octet_string(s, 0, (BYTE*)nla->identity->creds.password_creds->Domain,
-		                                        nla->identity->creds.password_creds->DomainLength * 2);
-		/* [1] userName (OCTET STRING) */
-		size += ber_write_sequence_octet_string(s, 1, (BYTE*)nla->identity->creds.password_creds->User,
-		                                        nla->identity->creds.password_creds->UserLength * 2);
-		/* [2] password (OCTET STRING) */
-		size += ber_write_sequence_octet_string(s, 2, (BYTE*)nla->identity->creds.password_creds->Password,
-		                                        nla->identity->creds.password_creds->PasswordLength * 2);
-	}
-
-	return size;
 }
 
 static BOOL nla_read_ts_credentials(rdpNla* nla, PSecBuffer ts_credentials)
