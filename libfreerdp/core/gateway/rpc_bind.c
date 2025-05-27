@@ -184,8 +184,8 @@ int rpc_send_bind_pdu(rdpRpc* rpc)
 		}
 	}
 
-	if (!ntlm_client_init(rpc->ntlm, FALSE, (LPCTSTR)settings->GatewayUsername, settings->GatewayDomain,
-	                      settings->GatewayPassword, NULL))
+	if (!ntlm_client_init(rpc->ntlm, FALSE, (LPCTSTR)settings->GatewayUsername, (LPCTSTR)settings->GatewayDomain,
+	                      (LPCTSTR)settings->GatewayPassword, NULL))
 		goto fail;
 
 	if (!ntlm_client_make_spn(rpc->ntlm, NULL, (LPCTSTR)settings->GatewayHostname))
