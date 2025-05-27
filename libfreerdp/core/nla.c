@@ -1792,12 +1792,12 @@ BOOL nla_read_ts_password_creds(rdpNla* nla, wStream* s)
 	{
 		nla->identity->Password = (UINT16*)malloc(length);
 
-		if (!nla->identity->Password)
+		if (!nla->identity->creds.password_creds->Password)
 			return FALSE;
 
-		CopyMemory(nla->identity->Password, Stream_Pointer(s), nla->identity->PasswordLength);
-		Stream_Seek(s, nla->identity->PasswordLength);
-		nla->identity->PasswordLength /= 2;
+		CopyMemory(nla->identity->creds.password_creds->Password, Stream_Pointer(s), nla->identity->creds.password_creds->PasswordLength);
+		Stream_Seek(s, nla->identity->creds.password_creds->PasswordLength);
+		nla->identity->creds.password_creds->PasswordLength /= 2;
 	}
 
 	return TRUE;
@@ -1810,17 +1810,17 @@ static size_t nla_write_ts_password_creds(rdpNla* nla, wStream* s)
 	/* TSPasswordCreds (SEQUENCE) */
 	size += ber_write_sequence_tag(s, innerSize);
 
-	if (nla->identity)
+	if (nla->identity->creds.password_creds)
 	{
 		/* [0] domainName (OCTET STRING) */
-		size += ber_write_sequence_octet_string(s, 0, (BYTE*)nla->identity->Domain,
-		                                        nla->identity->DomainLength * 2);
+		size += ber_write_sequence_octet_string(s, 0, (BYTE*)nla->identity->creds.password_creds->Domain,
+		                                        nla->identity->creds.password_creds->DomainLength * 2);
 		/* [1] userName (OCTET STRING) */
-		size += ber_write_sequence_octet_string(s, 1, (BYTE*)nla->identity->User,
-		                                        nla->identity->UserLength * 2);
+		size += ber_write_sequence_octet_string(s, 1, (BYTE*)nla->identity->creds.password_creds->User,
+		                                        nla->identity->creds.password_creds->UserLength * 2);
 		/* [2] password (OCTET STRING) */
-		size += ber_write_sequence_octet_string(s, 2, (BYTE*)nla->identity->Password,
-		                                        nla->identity->PasswordLength * 2);
+		size += ber_write_sequence_octet_string(s, 2, (BYTE*)nla->identity->creds.password_creds->Password,
+		                                        nla->identity->creds.password_creds->PasswordLength * 2);
 	}
 
 	return size;
@@ -1890,17 +1890,17 @@ static BOOL nla_encode_ts_credentials(rdpNla* nla)
 	if (nla->identity)
 	{
 		/* TSPasswordCreds */
-		DomainLength = nla->identity->DomainLength;
-		UserLength = nla->identity->UserLength;
-		PasswordLength = nla->identity->PasswordLength;
+		DomainLength = nla->identity->creds.password_creds->DomainLength;
+		UserLength = nla->identity->creds.password_creds->UserLength;
+		PasswordLength = nla->identity->creds.password_creds->PasswordLength;
 	}
 
-	if (nla->settings->DisableCredentialsDelegation && nla->identity)
+	if (nla->settings->DisableCredentialsDelegation && nla->identity->creds.password_creds)
 	{
 		/* TSPasswordCreds */
-		nla->identity->DomainLength = 0;
-		nla->identity->UserLength = 0;
-		nla->identity->PasswordLength = 0;
+		nla->identity->creds.password_creds->DomainLength = 0;
+		nla->identity->creds.password_creds->UserLength = 0;
+		nla->identity->creds.password_creds->PasswordLength = 0;
 	}
 
 	length = ber_sizeof_sequence(nla_sizeof_ts_credentials(nla));
@@ -1922,12 +1922,12 @@ static BOOL nla_encode_ts_credentials(rdpNla* nla)
 
 	nla_write_ts_credentials(nla, s);
 
-	if (nla->settings->DisableCredentialsDelegation && nla->identity)
+	if (nla->settings->DisableCredentialsDelegation && nla->identity->creds.password_creds)
 	{
 		/* TSPasswordCreds */
-		nla->identity->DomainLength = DomainLength;
-		nla->identity->UserLength = UserLength;
-		nla->identity->PasswordLength = PasswordLength;
+		nla->identity->creds.password_creds->DomainLength = DomainLength;
+		nla->identity->creds.password_creds->UserLength = UserLength;
+		nla->identity->->creds.password_creds->PasswordLength = PasswordLength;
 	}
 
 	Stream_Free(s, FALSE);
@@ -2553,6 +2553,7 @@ rdpNla* nla_new(freerdp* instance, rdpTransport* transport, rdpSettings* setting
 	if (!nla)
 		return NULL;
 
+#if 0 // from master
 	nla->identity = calloc(1, sizeof(SEC_WINNT_AUTH_IDENTITY));
 
 	if (!nla->identity)
@@ -2560,6 +2561,8 @@ rdpNla* nla_new(freerdp* instance, rdpTransport* transport, rdpSettings* setting
 		free(nla);
 		return NULL;
 	}
+
+#endif // from master
 
 	nla->instance = instance;
 	nla->settings = settings;
