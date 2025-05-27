@@ -306,6 +306,7 @@ enum FILE_FS_DEVICE_FLAG
 	FILE_DEVICE_SECURE_OPEN = 0x00000100
 };
 
+#if !defined(__MINGW64__)
 enum FILE_FS_INFORMATION_CLASS
 {
 	FileFsVolumeInformation = 1,
@@ -319,6 +320,7 @@ enum FILE_FS_INFORMATION_CLASS
 	FileFsDriverPathInformation,
 	FileFsMaximumInformation
 };
+#endif // !defined(__MINGW64__)
 
 typedef struct _DEVICE DEVICE;
 typedef struct _IRP IRP;
