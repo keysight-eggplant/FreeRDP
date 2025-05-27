@@ -3158,7 +3158,7 @@ LONG smartcard_pack_transmit_return(SMARTCARD_DEVICE* smartcard, wStream* s,
 	if (!Stream_EnsureRemainingCapacity(s, 4))
 		return SCARD_E_NO_MEMORY;
 	Stream_Write_UINT32(s, cbRecvLength); /* cbRecvLength (4 bytes) */
-	if (!smartcard_ndr_pointer_write(s, &index, cbRecvLength))
+	if (!smartcard_ndr_pointer_write(s, (UINt32 *)&index, cbRecvLength))
 		return SCARD_E_NO_MEMORY;
 
 	if (ret->pioRecvPci)
@@ -3174,7 +3174,7 @@ LONG smartcard_pack_transmit_return(SMARTCARD_DEVICE* smartcard, wStream* s,
 
 		Stream_Write_UINT32(s, ret->pioRecvPci->dwProtocol); /* dwProtocol (4 bytes) */
 		Stream_Write_UINT32(s, cbExtraBytes);                /* cbExtraBytes (4 bytes) */
-		if (!smartcard_ndr_pointer_write(s, &index, cbExtraBytes))
+		if (!smartcard_ndr_pointer_write(s, (UINT32 *)&index, cbExtraBytes))
 			return SCARD_E_NO_MEMORY;
 		error = smartcard_ndr_write(s, pbExtraBytes, cbExtraBytes, 1, NDR_PTR_SIMPLE);
 		if (error)

@@ -812,6 +812,7 @@ BOOL drive_file_query_directory(DRIVE_FILE* file, UINT32 FsInformationClass, BYT
 
 	switch (FsInformationClass)
 	{
+#ifndef _WIN32
 		case FileDirectoryInformation:
 
 			/* http://msdn.microsoft.com/en-us/library/cc232097.aspx */
@@ -848,7 +849,7 @@ BOOL drive_file_query_directory(DRIVE_FILE* file, UINT32 FsInformationClass, BYT
 			Stream_Write_UINT32(output, (UINT32)length);                   /* FileNameLength */
 			Stream_Write(output, file->find_data.cFileName, length);
 			break;
-
+#endif // _WIN32
 		case FileFullDirectoryInformation:
 
 			/* http://msdn.microsoft.com/en-us/library/cc232068.aspx */
