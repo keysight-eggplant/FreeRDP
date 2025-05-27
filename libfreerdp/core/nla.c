@@ -1038,11 +1038,11 @@ static size_t nla_sizeof_ts_password_creds(SEC_WINNT_AUTH_IDENTITY* identity)
 {
 	size_t length = 0;
 
-	if (identity->creds.password_creds)
+	if (identity)
 	{
-		length += ber_sizeof_sequence_octet_string(identity->creds.password_creds->DomainLength * 2);
-		length += ber_sizeof_sequence_octet_string(identity->creds.password_creds->UserLength * 2);
-		length += ber_sizeof_sequence_octet_string(identity->creds.password_creds->PasswordLength * 2);
+		length += ber_sizeof_sequence_octet_string(identity->DomainLength * 2);
+		length += ber_sizeof_sequence_octet_string(identity->UserLength * 2);
+		length += ber_sizeof_sequence_octet_string(identity->PasswordLength * 2);
 	}
 
 	return length;
