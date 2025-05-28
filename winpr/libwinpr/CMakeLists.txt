@@ -97,6 +97,10 @@ if (MINGW)
     winpr_library_add_private(glib-2.0)
 endif()
 
+if (MINGW)
+    winpr_library_add_private(ncrypt)
+endif()
+
 # Level "1" API as defined for MinCore.lib
 set(WINPR_CORE synch locale library file comm pipe interlocked security
 	environment crypto registry credentials path io memory input shell
