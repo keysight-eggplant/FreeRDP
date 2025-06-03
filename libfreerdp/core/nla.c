@@ -1146,6 +1146,8 @@ SECURITY_STATUS nla_encrypt_public_key_echo(rdpNla* nla)
 	const BOOL ntlm = (_tcsncmp(nla->packageName, NTLM_SSP_NAME, ARRAYSIZE(NTLM_SSP_NAME)) == 0);
 	public_key_length = nla->PublicKey.cbBuffer;
 
+  WLog_DBG(TAG, "Encrypting PUblic Key Echo cbSecurityTrailer: %d cbBlockSize: %d", nla->ContextSizes.cbSecurityTrailer, nla->ContextSizes.cbBlockSize);
+  WLog_DBG(TAG, "Encrypting PUblic Key Echo: %d (krb: %d nego: %d ntlm: %d", nla->tsCredentials.cbBuffer, krb, nego, ntlm);
 	sspi_SecBufferFree(&nla->pubKeyAuth);
 	if (!sspi_SecBufferAlloc(&nla->pubKeyAuth,
 	                         public_key_length + nla->ContextSizes.cbSecurityTrailer))
@@ -1307,6 +1309,8 @@ SECURITY_STATUS nla_decrypt_public_key_echo(rdpNla* nla)
 	if (!nla)
 		goto fail;
 
+  WLog_DBG(TAG, "DEcrypt PUblic Key Echo cbSecurityTrailer: %d cbBlockSize: %d", nla->ContextSizes.cbSecurityTrailer, nla->ContextSizes.cbBlockSize);
+  WLog_DBG(TAG, "DEcrypt PUblic Key Echo: %d (krb: %d nego: %d ntlm: %d", nla->tsCredentials.cbBuffer, krb, nego, ntlm);
 	krb = (_tcsncmp(nla->packageName, KERBEROS_SSP_NAME, ARRAYSIZE(KERBEROS_SSP_NAME)) == 0);
 	nego = (_tcsncmp(nla->packageName, NEGO_SSP_NAME, ARRAYSIZE(NEGO_SSP_NAME)) == 0);
 	ntlm = (_tcsncmp(nla->packageName, NTLM_SSP_NAME, ARRAYSIZE(NTLM_SSP_NAME)) == 0);
@@ -1828,6 +1832,8 @@ static SECURITY_STATUS nla_decrypt_ts_credentials(rdpNla* nla)
 		return SEC_E_INVALID_TOKEN;
 	}
 
+  WLog_DBG(TAG, "Decrypting TSCredentials cbSecurityTrailer: %d cbBlockSize: %d", nla->ContextSizes.cbSecurityTrailer, nla->ContextSizes.cbBlockSize);
+  WLog_DBG(TAG, "Decrypting TSCredentials: %d (krb: %d nego: %d ntlm: %d", nla->tsCredentials.cbBuffer, krb, nego, ntlm);
 	length = nla->authInfo.cbBuffer;
 	buffer = (BYTE*)malloc(length);
 
