@@ -1758,11 +1758,16 @@ static SECURITY_STATUS nla_encrypt_ts_credentials(rdpNla* nla)
 	                         nla->tsCredentials.cbBuffer + nla->ContextSizes.cbSecurityTrailer))
 		return SEC_E_INSUFFICIENT_MEMORY;
 
+  WLog_DBG(TAG, "Encrypting TSCredentials cbSecurityTrailer: %d cbBlockSize: %d", nla->ContextSizes.cbSecurityTrailer, nla->ContextSizes.cbBlockSize);
+  WLog_DBG(TAG, "Encrypting TSCredentials: %d (krb: %d nego: %d ntlm: %d", nla->tsCredentials.cbBuffer, krb, nego, ntlm);
+
+  winpr_HexDump(TAG, WLOG_DEBUG, nla->tsCredentials.pvBuffer, nla->tsCredentials.cbBuffer);
 	if (krb)
 	{
 		Buffers[0].BufferType = SECBUFFER_DATA; /* TSCredentials */
 		Buffers[0].cbBuffer = nla->tsCredentials.cbBuffer;
 		Buffers[0].pvBuffer = nla->authInfo.pvBuffer;
+    winpr_HexDump(TAG, WLOG_DEBUG, nla->authInfo.pvbuffer, nla->authInfo.cbBuffer);
 		CopyMemory(Buffers[0].pvBuffer, nla->tsCredentials.pvBuffer, Buffers[0].cbBuffer);
 		Message.cBuffers = 1;
 	}
@@ -1771,10 +1776,12 @@ static SECURITY_STATUS nla_encrypt_ts_credentials(rdpNla* nla)
 		Buffers[0].BufferType = SECBUFFER_TOKEN; /* Signature */
 		Buffers[0].cbBuffer = nla->ContextSizes.cbSecurityTrailer;
 		Buffers[0].pvBuffer = nla->authInfo.pvBuffer;
+    winpr_HexDump(TAG, WLOG_DEBUG, nla->authInfo.pvbuffer, nla->ContextSizes.cbSecurityTrailer);
 		MoveMemory(Buffers[0].pvBuffer, nla->authInfo.pvBuffer, Buffers[0].cbBuffer);
 		Buffers[1].BufferType = SECBUFFER_DATA; /* TSCredentials */
 		Buffers[1].cbBuffer = nla->tsCredentials.cbBuffer;
 		Buffers[1].pvBuffer = &((BYTE*)nla->authInfo.pvBuffer)[Buffers[0].cbBuffer];
+    winpr_HexDump(TAG, WLOG_DEBUG, &((BYTE*)nla->authInfo.pvBuffer)[Buffers[0].cbBuffer], nla->tsCredentials.cbBuffer);
 		CopyMemory(Buffers[1].pvBuffer, nla->tsCredentials.pvBuffer, Buffers[1].cbBuffer);
 		Message.cBuffers = 2;
 	}
@@ -2513,7 +2520,7 @@ BOOL nla_set_service_principal(rdpNla* nla, LPSTR principal)
 	if (!nla || !principal)
 		return FALSE;
 
-	nla->ServicePrincipalName = principal;
+	nla->ServicePrincipalName = (LPTSTR)principal;
 	return TRUE;
 }
 
