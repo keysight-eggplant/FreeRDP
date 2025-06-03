@@ -1767,7 +1767,7 @@ static SECURITY_STATUS nla_encrypt_ts_credentials(rdpNla* nla)
 		Buffers[0].BufferType = SECBUFFER_DATA; /* TSCredentials */
 		Buffers[0].cbBuffer = nla->tsCredentials.cbBuffer;
 		Buffers[0].pvBuffer = nla->authInfo.pvBuffer;
-    winpr_HexDump(TAG, WLOG_DEBUG, nla->authInfo.pvbuffer, nla->authInfo.cbBuffer);
+    winpr_HexDump(TAG, WLOG_DEBUG, nla->authInfo.pvBuffer, nla->authInfo.cbBuffer);
 		CopyMemory(Buffers[0].pvBuffer, nla->tsCredentials.pvBuffer, Buffers[0].cbBuffer);
 		Message.cBuffers = 1;
 	}
@@ -1776,7 +1776,7 @@ static SECURITY_STATUS nla_encrypt_ts_credentials(rdpNla* nla)
 		Buffers[0].BufferType = SECBUFFER_TOKEN; /* Signature */
 		Buffers[0].cbBuffer = nla->ContextSizes.cbSecurityTrailer;
 		Buffers[0].pvBuffer = nla->authInfo.pvBuffer;
-    winpr_HexDump(TAG, WLOG_DEBUG, nla->authInfo.pvbuffer, nla->ContextSizes.cbSecurityTrailer);
+    winpr_HexDump(TAG, WLOG_DEBUG, nla->authInfo.pvBuffer, nla->ContextSizes.cbSecurityTrailer);
 		MoveMemory(Buffers[0].pvBuffer, nla->authInfo.pvBuffer, Buffers[0].cbBuffer);
 		Buffers[1].BufferType = SECBUFFER_DATA; /* TSCredentials */
 		Buffers[1].cbBuffer = nla->tsCredentials.cbBuffer;
