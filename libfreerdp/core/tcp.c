@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+#include "winpr/wlog.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -467,6 +468,7 @@ static long transport_bio_buffered_callback(BIO* bio, int mode, const char* argp
 
 static int transport_bio_buffered_write(BIO* bio, const char* buf, int num)
 {
+	WLog_DBG(TAG, "We are entering transport_bio_buffered_write");
 	int i, ret;
 	int status;
 	int nchunks;
@@ -476,6 +478,7 @@ static int transport_bio_buffered_write(BIO* bio, const char* buf, int num)
 	BIO* next_bio = NULL;
 	ret = num;
 	ptr->writeBlocked = FALSE;
+	WLog_DBG(TAG, "We are about to BIO_clear_flags write");
 	BIO_clear_flags(bio, BIO_FLAGS_WRITE);
 
 	/* we directly append extra bytes in the xmit buffer, this could be prevented

@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 
+#include "winpr/wlog.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -102,6 +103,7 @@ static int rpc_client_receive_pipe_write(RpcClient* client, const BYTE* buffer, 
 
 int rpc_client_receive_pipe_read(RpcClient* client, BYTE* buffer, size_t length)
 {
+	WLog_DBG(TAG, "We are entering rpc_client_receive_pipe_read");
 	int index = 0;
 	size_t status = 0;
 	int nchunks = 0;

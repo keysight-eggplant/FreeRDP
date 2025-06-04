@@ -240,7 +240,12 @@ BOOL rdp_client_connect(rdpRdp* rdp)
 	UINT32 timeout;
 
 	if (!rdp_client_reset_codecs(rdp->context))
-		return FALSE;
+	{
+		// We're not going to make this a fialure as some clients do
+		// not have the minimum (fplat.dll) necessary installed on
+		// rdp_server_accept_mcs_channel_join_request systems... return FALSE;
+	}
+	return FALSE;
 
 	if (settings->FIPSMode)
 		flags |= WINPR_SSL_INIT_ENABLE_FIPS;
