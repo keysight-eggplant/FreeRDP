@@ -21,6 +21,7 @@
  * limitations under the License.
  */
 
+#include "winpr/wlog.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -1252,6 +1253,7 @@ BOOL mcs_client_begin(rdpMcs* mcs)
 	if (!context)
 		return FALSE;
 
+	WLog_DBG(TAG, "We are starting mcs_client_begin");
 	if (!mcs_send_connect_initial(mcs))
 	{
 		freerdp_set_last_error_if_not(context, FREERDP_ERROR_MCS_CONNECT_INITIAL_ERROR);

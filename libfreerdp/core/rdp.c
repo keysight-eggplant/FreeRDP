@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 
+#include "winpr/wlog.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -1515,6 +1516,7 @@ int rdp_recv_callback(rdpTransport* transport, wStream* s, void* extra)
 		case CONNECTION_STATE_NLA:
 			if (nla_get_state(rdp->nla) < NLA_STATE_AUTH_INFO)
 			{
+				WLog_DBG(TAG, "Attempting to nla_rev_pdu");
 				if (nla_recv_pdu(rdp->nla, s) < 1)
 				{
 					WLog_ERR(TAG, "%s: %s - nla_recv_pdu() fail", __FUNCTION__,
@@ -1525,6 +1527,7 @@ int rdp_recv_callback(rdpTransport* transport, wStream* s, void* extra)
 			else if (nla_get_state(rdp->nla) == NLA_STATE_POST_NEGO)
 			{
 				nego_recv(rdp->transport, s, (void*)rdp->nego);
+				WLog_DBG(TAG, "Just received nego_recv");
 
 				if (nego_get_state(rdp->nego) != NEGO_STATE_FINAL)
 				{
@@ -1532,6 +1535,7 @@ int rdp_recv_callback(rdpTransport* transport, wStream* s, void* extra)
 					         rdp_state_string(rdp_get_state(rdp)));
 					return -1;
 				}
+				WLog_DBG(TAG, "We now have NEGO_STATE_FINAL for sure");
 
 				if (!nla_set_state(rdp->nla, NLA_STATE_FINAL))
 					return -1;

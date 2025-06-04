@@ -19,6 +19,7 @@
  * limitations under the License.
  */
 
+#include "winpr/wlog.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -343,15 +344,20 @@ BOOL rdp_client_connect(rdpRdp* rdp)
 
 		return FALSE;
 	}
+	WLog_DBG(TAG, "Nego connect is complete");
 
 	SelectedProtocol = nego_get_selected_protocol(rdp->nego);
 
 	if ((SelectedProtocol & PROTOCOL_SSL) || (SelectedProtocol == PROTOCOL_RDP))
 	{
+		WLog_DBG(TAG, "We have the protocol_ssl or protocol_rdp in this case");
 		if ((settings->Username != NULL) &&
 		    ((settings->Password != NULL) ||
 		     (settings->RedirectionPassword != NULL && settings->RedirectionPasswordLength > 0)))
+		{
+			WLog_DBG(TAG, "Autologonenabled turned to true");
 			settings->AutoLogonEnabled = TRUE;
+		}
 	}
 
 	/* everything beyond this point is event-driven and non blocking */

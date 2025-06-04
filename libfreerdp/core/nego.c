@@ -20,6 +20,7 @@
  * limitations under the License.
  */
 
+#include "winpr/wlog.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -67,6 +68,7 @@ struct rdp_nego
 
 static const char* nego_state_string(NEGO_STATE state)
 {
+	WLog_DBG(TAG, "We are entering nego_state_string");
 	static const char* const NEGO_STATE_STRINGS[] = { "NEGO_STATE_INITIAL", "NEGO_STATE_EXT",
 		                                              "NEGO_STATE_NLA",     "NEGO_STATE_TLS",
 		                                              "NEGO_STATE_RDP",     "NEGO_STATE_FAIL",
@@ -78,6 +80,7 @@ static const char* nego_state_string(NEGO_STATE state)
 
 static const char* protocol_security_string(UINT32 security)
 {
+	WLog_DBG(TAG, "We are entering protocol_security_string");
 	static const char* PROTOCOL_SECURITY_STRINGS[] = { "RDP", "TLS", "NLA", "UNK", "UNK",
 		                                               "UNK", "UNK", "UNK", "EXT", "UNK" };
 	if (security >= ARRAYSIZE(PROTOCOL_SECURITY_STRINGS))
@@ -103,6 +106,7 @@ static BOOL nego_process_negotiation_failure(rdpNego* nego, wStream* s);
 
 BOOL nego_connect(rdpNego* nego)
 {
+	WLog_DBG(TAG, "We are entering nego_connect");
 	rdpSettings* settings = nego->transport->settings;
 
 	if (nego->state == NEGO_STATE_INITIAL)
@@ -229,6 +233,7 @@ BOOL nego_connect(rdpNego* nego)
 
 BOOL nego_disconnect(rdpNego* nego)
 {
+	WLog_DBG(TAG, "We are entering nego_disconnect");
 	nego->state = NEGO_STATE_INITIAL;
 	return nego_transport_disconnect(nego);
 }
@@ -236,6 +241,7 @@ BOOL nego_disconnect(rdpNego* nego)
 /* connect to selected security layer */
 BOOL nego_security_connect(rdpNego* nego)
 {
+	WLog_DBG(TAG, "We are entering nego_security_connect");
 	if (!nego->TcpConnected)
 	{
 		nego->SecurityConnected = FALSE;
@@ -275,6 +281,7 @@ BOOL nego_security_connect(rdpNego* nego)
 
 static BOOL nego_tcp_connect(rdpNego* nego)
 {
+	WLog_DBG(TAG, "We are now entering nego_tcp_connect");
 	if (!nego->TcpConnected)
 	{
 		const UINT32 TcpConnectTimeout = freerdp_settings_get_uint32(
@@ -318,6 +325,7 @@ static BOOL nego_tcp_connect(rdpNego* nego)
 
 BOOL nego_transport_connect(rdpNego* nego)
 {
+	WLog_DBG(TAG, "We are entering nego_transport_connect");
 	if (!nego_tcp_connect(nego))
 		return FALSE;
 
@@ -335,6 +343,7 @@ BOOL nego_transport_connect(rdpNego* nego)
 
 BOOL nego_transport_disconnect(rdpNego* nego)
 {
+	WLog_DBG(TAG, "We are entering nego_transport_disconnect");
 	if (nego->TcpConnected)
 		transport_disconnect(nego->transport);
 
@@ -351,6 +360,7 @@ BOOL nego_transport_disconnect(rdpNego* nego)
 
 BOOL nego_send_preconnection_pdu(rdpNego* nego)
 {
+	WLog_DBG(TAG, "We are entering nego_send_preconnection_pdu");
 	wStream* s;
 	UINT32 cbSize;
 	UINT16 cchPCB = 0;
@@ -410,6 +420,7 @@ BOOL nego_send_preconnection_pdu(rdpNego* nego)
 
 static void nego_attempt_ext(rdpNego* nego)
 {
+	WLog_DBG(TAG, "We are now entering nego_attempt_ext");
 	nego->RequestedProtocols = PROTOCOL_HYBRID | PROTOCOL_SSL | PROTOCOL_HYBRID_EX;
 	WLog_DBG(TAG, "Attempting NLA extended security");
 
@@ -455,6 +466,7 @@ static void nego_attempt_ext(rdpNego* nego)
 
 static void nego_attempt_nla(rdpNego* nego)
 {
+	WLog_DBG(TAG, "We are entering nego_attempt_nla");
 	nego->RequestedProtocols = PROTOCOL_HYBRID | PROTOCOL_SSL;
 	WLog_DBG(TAG, "Attempting NLA security");
 
@@ -498,6 +510,7 @@ static void nego_attempt_nla(rdpNego* nego)
 
 static void nego_attempt_tls(rdpNego* nego)
 {
+	WLog_DBG(TAG, "We are entering nego_attempt_tls");
 	nego->RequestedProtocols = PROTOCOL_SSL;
 	WLog_DBG(TAG, "Attempting TLS security");
 
@@ -537,6 +550,7 @@ static void nego_attempt_tls(rdpNego* nego)
 
 static void nego_attempt_rdp(rdpNego* nego)
 {
+	WLog_DBG(TAG, "We are now entering nego_attempt_rdp");
 	nego->RequestedProtocols = PROTOCOL_RDP;
 	WLog_DBG(TAG, "Attempting RDP security");
 
@@ -566,6 +580,7 @@ static void nego_attempt_rdp(rdpNego* nego)
 
 BOOL nego_recv_response(rdpNego* nego)
 {
+	WLog_DBG(TAG, "We are now entering nego_recv_response");
 	int status;
 	wStream* s;
 	s = Stream_New(NULL, 1024);
@@ -603,6 +618,7 @@ BOOL nego_recv_response(rdpNego* nego)
 
 int nego_recv(rdpTransport* transport, wStream* s, void* extra)
 {
+	WLog_DBG(TAG, "We are entering nego_recv");
 	BYTE li;
 	BYTE type;
 	UINT16 length;
@@ -684,6 +700,7 @@ int nego_recv(rdpTransport* transport, wStream* s, void* extra)
 
 static BOOL nego_read_request_token_or_cookie(rdpNego* nego, wStream* s)
 {
+	WLog_DBG(TAG, "We are now entering nego_read_request_token_or_cookie");
 	/* routingToken and cookie are optional and mutually exclusive!
 	 *
 	 * routingToken (variable): An optional and variable-length routing
@@ -773,6 +790,7 @@ static BOOL nego_read_request_token_or_cookie(rdpNego* nego, wStream* s)
 
 BOOL nego_read_request(rdpNego* nego, wStream* s)
 {
+	WLog_DBG(TAG, "We are now entering nego_read_request");
 	BYTE li;
 	BYTE type;
 	UINT16 length;
@@ -828,6 +846,7 @@ BOOL nego_read_request(rdpNego* nego, wStream* s)
 
 void nego_send(rdpNego* nego)
 {
+	WLog_DBG(TAG, "We are now entering nego_send");
 	if (nego->state == NEGO_STATE_EXT)
 		nego_attempt_ext(nego);
 	else if (nego->state == NEGO_STATE_NLA)
@@ -849,6 +868,7 @@ void nego_send(rdpNego* nego)
 
 BOOL nego_send_negotiation_request(rdpNego* nego)
 {
+	WLog_DBG(TAG, "We are now entering nego_send_negotiation_request");
 	BOOL rc = FALSE;
 	wStream* s;
 	size_t length;
@@ -940,6 +960,7 @@ fail:
 
 BOOL nego_process_negotiation_request(rdpNego* nego, wStream* s)
 {
+	WLog_DBG(TAG, "We are now entering nego_process_negotiation_request");
 	BYTE flags;
 	UINT16 length;
 
@@ -960,6 +981,7 @@ BOOL nego_process_negotiation_request(rdpNego* nego, wStream* s)
  */
 static const char* nego_rdp_neg_rsp_flags_str(UINT32 flags)
 {
+	WLog_DBG(TAG, "We are now entering nego_rdp_neg_rsp_flags_str");
 	static char buffer[1024] = { 0 };
 
 	_snprintf(buffer, ARRAYSIZE(buffer), "[0x%02" PRIx32 "] ", flags);
@@ -983,6 +1005,7 @@ static const char* nego_rdp_neg_rsp_flags_str(UINT32 flags)
 
 BOOL nego_process_negotiation_response(rdpNego* nego, wStream* s)
 {
+	WLog_DBG(TAG, "We are now entering nego_process_negotiation_response");
 	UINT16 length;
 	WLog_DBG(TAG, "RDP_NEG_RSP");
 
@@ -1009,6 +1032,7 @@ BOOL nego_process_negotiation_response(rdpNego* nego, wStream* s)
 
 BOOL nego_process_negotiation_failure(rdpNego* nego, wStream* s)
 {
+	WLog_DBG(TAG, "We are now entering nego_process_negotation_failure");
 	BYTE flags;
 	UINT16 length;
 	UINT32 failureCode;
@@ -1059,6 +1083,7 @@ BOOL nego_process_negotiation_failure(rdpNego* nego, wStream* s)
 
 BOOL nego_send_negotiation_response(rdpNego* nego)
 {
+	WLog_DBG(TAG, "We are now entering nego_send_negotiation_response");
 	UINT16 length;
 	size_t bm, em;
 	BOOL status;
@@ -1187,6 +1212,7 @@ BOOL nego_send_negotiation_response(rdpNego* nego)
 
 void nego_init(rdpNego* nego)
 {
+	WLog_DBG(TAG, "We are now entering nego_init");
 	nego->state = NEGO_STATE_INITIAL;
 	nego->RequestedProtocols = PROTOCOL_RDP;
 	nego->CookieMaxLength = DEFAULT_COOKIE_MAX_LENGTH;
