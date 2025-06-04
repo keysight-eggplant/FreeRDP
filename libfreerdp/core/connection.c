@@ -245,7 +245,6 @@ BOOL rdp_client_connect(rdpRdp* rdp)
 		// not have the minimum (fplat.dll) necessary installed on
 		// rdp_server_accept_mcs_channel_join_request systems... return FALSE;
 	}
-	return FALSE;
 
 	if (settings->FIPSMode)
 		flags |= WINPR_SSL_INIT_ENABLE_FIPS;
