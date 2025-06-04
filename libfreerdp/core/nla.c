@@ -463,6 +463,9 @@ static BOOL nla_transfer_buffer(SecBuffer* dst, SecBuffer* src)
 
 	dst->pvBuffer = src->pvBuffer;
 	src->pvBuffer = NULL;
+	WLog_DBG(TAG, "About to nla_transfer_buffer with src followed by dest");
+	winpr_HexDump(TAG, WLOG_DEBUG, src->pvBuffer, src->cbBuffer);
+	winpr_HexDump(TAG, WLOG_DEBUG, dst->pvBuffer, dst->cbBuffer);
 	return TRUE;
 }
 
@@ -513,6 +516,8 @@ int nla_client_begin(rdpNla* nla)
 
 			nla->cbMaxToken = nla->pPackageInfo->cbMaxToken;
 			nla->packageName = nla->pPackageInfo->Name;
+			WLog_DBG(TAG, "We have package name middle of client begin at %s and length %d",
+			         nla->packageName, nla->cbMaxToken);
 		}
 	}
 
@@ -543,6 +548,7 @@ int nla_client_begin(rdpNla* nla)
 	if (nla->outputBuffer.cbBuffer < 1)
 		return -1;
 
+	WLog_DBG(TAG, "We are transferring nego token to output buffer");
 	if (!nla_transfer_buffer(&nla->negoToken, &nla->outputBuffer))
 		return -1;
 
@@ -1987,6 +1993,7 @@ BOOL nla_send(rdpNla* nla, const char* msg)
 		return FALSE;
 	}
 
+	WLog_DBG(TAG, "We are about to start TSRequest process");
 	/* TSRequest */
 	ber_write_sequence_tag(s, ts_request_length); /* SEQUENCE */
 	/* [0] version */

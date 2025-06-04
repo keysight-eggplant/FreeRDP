@@ -17,6 +17,8 @@
  * limitations under the License.
  */
 
+#include "winpr/print.h"
+#include "winpr/wlog.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -315,6 +317,8 @@ BOOL ber_read_bit_string(wStream* s, size_t* length, BYTE* padding)
 size_t ber_write_octet_string(wStream* s, const BYTE* oct_str, size_t length)
 {
 	size_t size = 0;
+	WLog_DBG(TAG, "We are abou to print ber_write_octet_string data");
+	winpr_HexDump(TAG, WLOG_DEBUG, oct_str, length);
 	size += ber_write_universal_tag(s, BER_TAG_OCTET_STRING, FALSE);
 	size += ber_write_length(s, length);
 	Stream_Write(s, oct_str, length);
