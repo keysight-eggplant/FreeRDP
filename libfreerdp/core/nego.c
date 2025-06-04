@@ -20,6 +20,7 @@
  * limitations under the License.
  */
 
+#include "winpr/print.h"
 #include "winpr/wlog.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -884,6 +885,7 @@ BOOL nego_send_negotiation_request(rdpNego* nego)
 	}
 
 	length = TPDU_CONNECTION_REQUEST_LENGTH;
+	WLog_DBG(TAG, "This is the length of nego_send_negotation_request: %d", length);
 	bm = Stream_GetPosition(s);
 	Stream_Seek(s, length);
 
@@ -910,10 +912,14 @@ BOOL nego_send_negotiation_request(rdpNego* nego)
 	}
 	else if (nego->cookie)
 	{
+		WLog_DBG(TAG, "We are planning to use nego->cookie");
 		cookie_length = strlen(nego->cookie);
 
 		if (cookie_length > nego->CookieMaxLength)
 			cookie_length = nego->CookieMaxLength;
+
+		WLog_DBG(TAG, "We have a length of cookie: %d", cookie_length);
+		winpr_HexDump(TAG, WLOG_DEBUG, (BYTE*)nego->cookie, cookie_length);
 
 		Stream_Write(s, "Cookie: mstshash=", 17);
 		Stream_Write(s, (BYTE*)nego->cookie, cookie_length);
@@ -921,6 +927,7 @@ BOOL nego_send_negotiation_request(rdpNego* nego)
 		Stream_Write_UINT8(s, 0x0A); /* LF */
 		length += cookie_length + 19;
 	}
+	WLog_DBG(TAG, "Total length so far after cookie: %d", length);
 
 	WLog_DBG(TAG, "RequestedProtocols: %" PRIu32 "", nego->RequestedProtocols);
 
@@ -936,6 +943,7 @@ BOOL nego_send_negotiation_request(rdpNego* nego)
 		Stream_Write_UINT32(s, nego->RequestedProtocols); /* requestedProtocols */
 		length += 8;
 	}
+	WLog_DBG(TAG, "Total length after requested protocol RDP");
 
 	if (length > UINT16_MAX)
 		goto fail;

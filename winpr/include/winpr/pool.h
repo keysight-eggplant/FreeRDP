@@ -56,7 +56,8 @@ typedef struct _TP_CALLBACK_ENVIRON_V1
 	struct _ACTIVATION_CONTEXT* ActivationContext;
 	PTP_SIMPLE_CALLBACK FinalizationCallback;
 
-	union {
+	union
+	{
 		DWORD Flags;
 		struct
 		{
@@ -121,6 +122,7 @@ extern "C"
 
 	/* Synch */
 
+#define WINPR_THREAD_POOL 1
 #ifdef WINPR_THREAD_POOL
 
 	WINPR_API PTP_WAIT winpr_CreateThreadpoolWait(PTP_WAIT_CALLBACK pfnwa, PVOID pv,
