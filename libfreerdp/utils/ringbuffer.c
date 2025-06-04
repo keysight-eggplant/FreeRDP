@@ -17,6 +17,8 @@
  * limitations under the License.
  */
 
+#include "winpr/print.h"
+#include "winpr/wlog.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -281,6 +283,7 @@ int ringbuffer_peek(const RingBuffer* rb, DataChunk chunks[2], size_t sz)
 void ringbuffer_commit_read_bytes(RingBuffer* rb, size_t sz)
 {
 	DEBUG_RINGBUFFER("ringbuffer_commit_read_bytes(%p): sz: %" PRIdz "", (void*)rb, sz);
+	winpr_HexDump(TAG, WLOG_DEBUG, rb->buffer, sz);
 
 	if (sz < 1)
 		return;
