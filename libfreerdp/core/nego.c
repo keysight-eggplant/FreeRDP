@@ -1413,6 +1413,10 @@ BOOL nego_set_cookie(rdpNego* nego, char* cookie)
 		WLog_DBG(TAG, "We are returning true becaus no cookie exists !cookie");
 		return TRUE;
 	}
+	else
+	{
+		return TRUE;
+	}
 
 	nego->cookie = _strdup(cookie);
 	WLog_DBG(TAG, "The cookie stored inside nego is: %s", nego->cookie);
