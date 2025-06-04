@@ -1272,6 +1272,13 @@ SECURITY_STATUS nla_encrypt_public_key_hash(rdpNla* nla)
 		Buffers[0].BufferType = SECBUFFER_TOKEN; /* Signature */
 		Buffers[0].cbBuffer = nla->ContextSizes.cbSecurityTrailer;
 		Buffers[0].pvBuffer = nla->pubKeyAuth.pvBuffer;
+		WLog_DBG(TAG, "Here is SECBUFFER_TOKEN");
+		winpr_HexDump(TAG, WLOG_DEBUG, nla->pubKeyAuth.pvBuffer,
+		              nla->ContextSizes.cbSecurityTrailer);
+		WLog_DBG(TAG, "Here is SECBUFFER_DATA");
+		winpr_HexDump(TAG, WLOG_DEBUG,
+		              ((BYTE*)nla->pubKeyAuth.pvBuffer) + nla->ContextSizes.cbSecurityTrailer,
+		              WINPR_SHA256_DIGEST_LENGTH);
 		Buffers[1].BufferType = SECBUFFER_DATA; /* SHA256 hash */
 		Buffers[1].cbBuffer = WINPR_SHA256_DIGEST_LENGTH;
 		Buffers[1].pvBuffer =
