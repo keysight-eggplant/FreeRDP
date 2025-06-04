@@ -17,6 +17,8 @@
  * limitations under the License.
  */
 
+#include "freerdp/freerdp.h"
+#include "winpr/wlog.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -568,6 +570,13 @@ static SSIZE_T transport_read_layer(rdpTransport* transport, BYTE* data, size_t 
 
 		if (status <= 0)
 		{
+			// Have we been requested to abort the connection??
+			if (freerdp_shall_disconnect(transport->settings->instance))
+			{
+				WLog_Print(transport->log, WLOG_ERROR,
+				           "BIO_read: disconnect requested - aborting connection");
+				return -1;
+			}
 			if (!transport->frontBio || !BIO_should_retry(transport->frontBio))
 			{
 				/* something unexpected happened, let's close */
