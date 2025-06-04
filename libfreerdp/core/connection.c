@@ -268,6 +268,7 @@ BOOL rdp_client_connect(rdpRdp* rdp)
 
 	if (settings->GatewayEnabled)
 	{
+		WLog_DBG(TAG, "We seem to have Gateway Enabled");
 		char* user = NULL;
 		char* domain = NULL;
 		char* cookie = NULL;
@@ -285,7 +286,7 @@ BOOL rdp_client_connect(rdpRdp* rdp)
 			domain = settings->Domain;
 		else
 			domain = settings->ComputerName;
-
+		WLog_DBG(TAG, "here is the domain here: %s", domain);
 		domain_length = strlen(domain);
 		cookie_length = domain_length + 1 + user_length;
 		cookie = (char*)malloc(cookie_length + 1);
@@ -301,11 +302,13 @@ BOOL rdp_client_connect(rdpRdp* rdp)
 			CopyMemory(&cookie[domain_length + 1], user, user_length);
 
 		cookie[cookie_length] = '\0';
+		WLog_DBG(TAG, "During gateway we have cookie: %s", cookie);
 		status = nego_set_cookie(rdp->nego, cookie);
 		free(cookie);
 	}
 	else
 	{
+		WLog_DBG(TAG, "We are not in gateway so we are using username as cookie");
 		status = nego_set_cookie(rdp->nego, settings->Username);
 	}
 

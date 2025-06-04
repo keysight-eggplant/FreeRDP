@@ -1397,16 +1397,25 @@ BOOL nego_set_routing_token(rdpNego* nego, BYTE* RoutingToken, DWORD RoutingToke
 
 BOOL nego_set_cookie(rdpNego* nego, char* cookie)
 {
+	if (cookie != NULL)
+	{
+		WLog_DBG(TAG, "In nego_set_cookie we have a starting cookie of: %s", cookie);
+	}
 	if (nego->cookie)
 	{
+		WLog_DBG(TAG, "We are resetting cookie in nego here");
 		free(nego->cookie);
 		nego->cookie = NULL;
 	}
 
 	if (!cookie)
+	{
+		WLog_DBG(TAG, "We are returning true becaus no cookie exists !cookie");
 		return TRUE;
+	}
 
 	nego->cookie = _strdup(cookie);
+	WLog_DBG(TAG, "The cookie stored inside nego is: %s", nego->cookie);
 
 	if (!nego->cookie)
 		return FALSE;
