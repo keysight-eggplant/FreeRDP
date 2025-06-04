@@ -21,6 +21,7 @@
  * limitations under the License.
  */
 
+#include "winpr/wlog.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -348,6 +349,8 @@ static int nla_client_init(rdpNla* nla)
 
 			if (usePassword)
 			{
+				WLog_DBG(TAG, "Here is username: %s and domain %s and password %s",
+				         settings->Username, settings->Domain, settings->Password);
 				if (sspi_SetAuthIdentity(nla->identity, settings->Username, settings->Domain,
 				                         settings->Password) < 0)
 					return -1;
@@ -369,6 +372,8 @@ static int nla_client_init(rdpNla* nla)
 		return -1;
 	}
 
+	WLog_DBG(TAG, "About to print tls public key");
+	winpr_HexDump(TAG, WLOG_DEBUG, tls->PublicKey, tls->PublicKeyLength);
 	CopyMemory(nla->PublicKey.pvBuffer, tls->PublicKey, tls->PublicKeyLength);
 	length = sizeof(TERMSRV_SPN_PREFIX) + strlen(settings->ServerHostname);
 	spn = (SEC_CHAR*)malloc(length + 1);
@@ -377,6 +382,7 @@ static int nla_client_init(rdpNla* nla)
 		return -1;
 
 	sprintf_s(spn, length + 1, "%s%s", TERMSRV_SPN_PREFIX, settings->ServerHostname);
+	WLog_DBG(TAG, "This is spn: %s", spn);
 #ifdef UNICODE
 	nla->ServicePrincipalName = NULL;
 	ConvertToUnicode(CP_UTF8, 0, spn, -1, &nla->ServicePrincipalName, 0);
@@ -408,7 +414,7 @@ static int nla_client_init(rdpNla* nla)
 #endif
 	nla->cbMaxToken = nla->pPackageInfo->cbMaxToken;
 	nla->packageName = nla->pPackageInfo->Name;
-	WLog_DBG(TAG, "%s %" PRIu32 " : packageName=%ls ; cbMaxToken=%d", __FUNCTION__, __LINE__,
+	WLog_DBG(TAG, "%s %" PRIu32 " : packageName=%s ; cbMaxToken=%d", __FUNCTION__, __LINE__,
 	         nla->packageName, nla->cbMaxToken);
 	nla->status = nla->table->AcquireCredentialsHandle(NULL, NLA_PKG_NAME, SECPKG_CRED_OUTBOUND,
 	                                                   NULL, nla->identity, NULL, NULL,
@@ -1146,8 +1152,10 @@ SECURITY_STATUS nla_encrypt_public_key_echo(rdpNla* nla)
 	const BOOL ntlm = (_tcsncmp(nla->packageName, NTLM_SSP_NAME, ARRAYSIZE(NTLM_SSP_NAME)) == 0);
 	public_key_length = nla->PublicKey.cbBuffer;
 
-  WLog_DBG(TAG, "Encrypting PUblic Key Echo cbSecurityTrailer: %d cbBlockSize: %d", nla->ContextSizes.cbSecurityTrailer, nla->ContextSizes.cbBlockSize);
-  WLog_DBG(TAG, "Encrypting PUblic Key Echo: %d (krb: %d nego: %d ntlm: %d", nla->tsCredentials.cbBuffer, krb, nego, ntlm);
+	WLog_DBG(TAG, "Encrypting PUblic Key Echo cbSecurityTrailer: %d cbBlockSize: %d",
+	         nla->ContextSizes.cbSecurityTrailer, nla->ContextSizes.cbBlockSize);
+	WLog_DBG(TAG, "Encrypting PUblic Key Echo: %d (krb: %d nego: %d ntlm: %d",
+	         nla->tsCredentials.cbBuffer, krb, nego, ntlm);
 	sspi_SecBufferFree(&nla->pubKeyAuth);
 	if (!sspi_SecBufferAlloc(&nla->pubKeyAuth,
 	                         public_key_length + nla->ContextSizes.cbSecurityTrailer))
@@ -1309,8 +1317,10 @@ SECURITY_STATUS nla_decrypt_public_key_echo(rdpNla* nla)
 	if (!nla)
 		goto fail;
 
-  WLog_DBG(TAG, "DEcrypt PUblic Key Echo cbSecurityTrailer: %d cbBlockSize: %d", nla->ContextSizes.cbSecurityTrailer, nla->ContextSizes.cbBlockSize);
-  WLog_DBG(TAG, "DEcrypt PUblic Key Echo: %d (krb: %d nego: %d ntlm: %d", nla->tsCredentials.cbBuffer, krb, nego, ntlm);
+	WLog_DBG(TAG, "DEcrypt PUblic Key Echo cbSecurityTrailer: %d cbBlockSize: %d",
+	         nla->ContextSizes.cbSecurityTrailer, nla->ContextSizes.cbBlockSize);
+	WLog_DBG(TAG, "DEcrypt PUblic Key Echo: %d (krb: %d nego: %d ntlm: %d",
+	         nla->tsCredentials.cbBuffer, krb, nego, ntlm);
 	krb = (_tcsncmp(nla->packageName, KERBEROS_SSP_NAME, ARRAYSIZE(KERBEROS_SSP_NAME)) == 0);
 	nego = (_tcsncmp(nla->packageName, NEGO_SSP_NAME, ARRAYSIZE(NEGO_SSP_NAME)) == 0);
 	ntlm = (_tcsncmp(nla->packageName, NTLM_SSP_NAME, ARRAYSIZE(NTLM_SSP_NAME)) == 0);
@@ -1762,16 +1772,18 @@ static SECURITY_STATUS nla_encrypt_ts_credentials(rdpNla* nla)
 	                         nla->tsCredentials.cbBuffer + nla->ContextSizes.cbSecurityTrailer))
 		return SEC_E_INSUFFICIENT_MEMORY;
 
-  WLog_DBG(TAG, "Encrypting TSCredentials cbSecurityTrailer: %d cbBlockSize: %d", nla->ContextSizes.cbSecurityTrailer, nla->ContextSizes.cbBlockSize);
-  WLog_DBG(TAG, "Encrypting TSCredentials: %d (krb: %d nego: %d ntlm: %d", nla->tsCredentials.cbBuffer, krb, nego, ntlm);
+	WLog_DBG(TAG, "Encrypting TSCredentials cbSecurityTrailer: %d cbBlockSize: %d",
+	         nla->ContextSizes.cbSecurityTrailer, nla->ContextSizes.cbBlockSize);
+	WLog_DBG(TAG, "Encrypting TSCredentials: %d (krb: %d nego: %d ntlm: %d",
+	         nla->tsCredentials.cbBuffer, krb, nego, ntlm);
 
-  winpr_HexDump(TAG, WLOG_DEBUG, nla->tsCredentials.pvBuffer, nla->tsCredentials.cbBuffer);
+	winpr_HexDump(TAG, WLOG_DEBUG, nla->tsCredentials.pvBuffer, nla->tsCredentials.cbBuffer);
 	if (krb)
 	{
 		Buffers[0].BufferType = SECBUFFER_DATA; /* TSCredentials */
 		Buffers[0].cbBuffer = nla->tsCredentials.cbBuffer;
 		Buffers[0].pvBuffer = nla->authInfo.pvBuffer;
-    winpr_HexDump(TAG, WLOG_DEBUG, nla->authInfo.pvBuffer, nla->authInfo.cbBuffer);
+		winpr_HexDump(TAG, WLOG_DEBUG, nla->authInfo.pvBuffer, nla->authInfo.cbBuffer);
 		CopyMemory(Buffers[0].pvBuffer, nla->tsCredentials.pvBuffer, Buffers[0].cbBuffer);
 		Message.cBuffers = 1;
 	}
@@ -1780,12 +1792,13 @@ static SECURITY_STATUS nla_encrypt_ts_credentials(rdpNla* nla)
 		Buffers[0].BufferType = SECBUFFER_TOKEN; /* Signature */
 		Buffers[0].cbBuffer = nla->ContextSizes.cbSecurityTrailer;
 		Buffers[0].pvBuffer = nla->authInfo.pvBuffer;
-    winpr_HexDump(TAG, WLOG_DEBUG, nla->authInfo.pvBuffer, nla->ContextSizes.cbSecurityTrailer);
+		winpr_HexDump(TAG, WLOG_DEBUG, nla->authInfo.pvBuffer, nla->ContextSizes.cbSecurityTrailer);
 		MoveMemory(Buffers[0].pvBuffer, nla->authInfo.pvBuffer, Buffers[0].cbBuffer);
 		Buffers[1].BufferType = SECBUFFER_DATA; /* TSCredentials */
 		Buffers[1].cbBuffer = nla->tsCredentials.cbBuffer;
 		Buffers[1].pvBuffer = &((BYTE*)nla->authInfo.pvBuffer)[Buffers[0].cbBuffer];
-    winpr_HexDump(TAG, WLOG_DEBUG, &((BYTE*)nla->authInfo.pvBuffer)[Buffers[0].cbBuffer], nla->tsCredentials.cbBuffer);
+		winpr_HexDump(TAG, WLOG_DEBUG, &((BYTE*)nla->authInfo.pvBuffer)[Buffers[0].cbBuffer],
+		              nla->tsCredentials.cbBuffer);
 		CopyMemory(Buffers[1].pvBuffer, nla->tsCredentials.pvBuffer, Buffers[1].cbBuffer);
 		Message.cBuffers = 2;
 	}
@@ -1832,8 +1845,10 @@ static SECURITY_STATUS nla_decrypt_ts_credentials(rdpNla* nla)
 		return SEC_E_INVALID_TOKEN;
 	}
 
-  WLog_DBG(TAG, "Decrypting TSCredentials cbSecurityTrailer: %d cbBlockSize: %d", nla->ContextSizes.cbSecurityTrailer, nla->ContextSizes.cbBlockSize);
-  WLog_DBG(TAG, "Decrypting TSCredentials: %d (krb: %d nego: %d ntlm: %d", nla->tsCredentials.cbBuffer, krb, nego, ntlm);
+	WLog_DBG(TAG, "Decrypting TSCredentials cbSecurityTrailer: %d cbBlockSize: %d",
+	         nla->ContextSizes.cbSecurityTrailer, nla->ContextSizes.cbBlockSize);
+	WLog_DBG(TAG, "Decrypting TSCredentials: %d (krb: %d nego: %d ntlm: %d",
+	         nla->tsCredentials.cbBuffer, krb, nego, ntlm);
 	length = nla->authInfo.cbBuffer;
 	buffer = (BYTE*)malloc(length);
 
