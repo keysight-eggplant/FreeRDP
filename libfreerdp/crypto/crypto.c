@@ -319,7 +319,7 @@ static char* crypto_print_name(X509_NAME* name)
 
 		WLog_DBG(TAG, "BIO_read in crypto_print_name with length: %d", size);
 		status = BIO_read(outBIO, buffer, size);
-		WLog_DBG(TAG, "Status of BIO_read is %d", status);
+		WLog_DBG(TAG, "Status of BIO_read in crypto_print_name is %d", status);
 	}
 
 	BIO_free_all(outBIO);

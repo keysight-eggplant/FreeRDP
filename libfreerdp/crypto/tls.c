@@ -1360,7 +1360,7 @@ static BOOL tls_extract_pem(CryptoCert cert, BYTE** PublicKey, DWORD* PublicKeyL
 
 	WLog_DBG(TAG, "Calling BIO_read in tls_extra_pem with size: %d", length);
 	status = BIO_read(bio, pemCert, length);
-	WLog_DBG(TAG, "Status of calling BIO_read is %d", status);
+	WLog_DBG(TAG, "Status of calling BIO_read in tls_extra_pem is %d", status);
 
 	if (status < 0)
 	{

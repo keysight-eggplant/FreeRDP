@@ -571,9 +571,9 @@ static SSIZE_T transport_read_layer(rdpTransport* transport, BYTE* data, size_t 
 		const SSIZE_T tr = (SSIZE_T)bytes - read;
 		WLog_DBG(TAG, "We have tr as: %d", tr);
 		int r = (int)((tr > INT_MAX) ? INT_MAX : tr);
-		WLog_DBG(TAG, "About to do a bio read of length: %d", r);
+		WLog_DBG(TAG, "About to do a bio in transport_read_layer read of length: %d", r);
 		int status = BIO_read(transport->frontBio, data + read, r);
-		WLog_DBG(TAG, "Status of BIO_read: %d", status);
+		WLog_DBG(TAG, "Status of BIO_read in transport_read_layer: %d", status);
 
 		if (status <= 0)
 		{

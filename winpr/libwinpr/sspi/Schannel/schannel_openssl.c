@@ -375,7 +375,7 @@ SECURITY_STATUS schannel_openssl_client_process_tokens(SCHANNEL_OPENSSL* context
 		         "About to do a BIO_read in schannel_openssl_client_process_tokens with size: %d",
 		         SCHANNEL_CB_MAX_TOKEN);
 		status = BIO_read(context->bioWrite, context->ReadBuffer, SCHANNEL_CB_MAX_TOKEN);
-		WLog_DBG(TAG, "Status of BIO_read is %d", status);
+		WLog_DBG(TAG, "Status of BIO_read in schannel_openssl_client_process_tokens is %d", status);
 
 		if (pOutput->cBuffers < 1)
 			return SEC_E_INVALID_TOKEN;
@@ -434,7 +434,11 @@ SECURITY_STATUS schannel_openssl_server_process_tokens(SCHANNEL_OPENSSL* context
 		if (status == 1)
 			context->connected = TRUE;
 
+		WLog_DBG(TAG,
+		         "About to do a bio read in schannel_openssl_server_process_tokens of length: %d",
+		         SCHANNEL_CB_MAX_TOKEN);
 		status = BIO_read(context->bioWrite, context->ReadBuffer, SCHANNEL_CB_MAX_TOKEN);
+		WLog_DBG(TAG, "Result of BIO_read in schannel_openssl_server_process_tokens: %d", status);
 
 		if (pOutput->cBuffers < 1)
 			return SEC_E_INVALID_TOKEN;
