@@ -553,6 +553,8 @@ static void transport_bio_error_log(rdpTransport* transport, LPCSTR biofunc, BIO
 
 static SSIZE_T transport_read_layer(rdpTransport* transport, BYTE* data, size_t bytes)
 {
+	WLog_DBG(TAG, "We have started transport read layyer with starting addr: %p", data);
+	WLog_DBG(TAG, "We have started transport read layyer with bytes: %d", bytes);
 	SSIZE_T read = 0;
 	rdpRdp* rdp = transport->context->rdp;
 
@@ -565,7 +567,9 @@ static SSIZE_T transport_read_layer(rdpTransport* transport, BYTE* data, size_t 
 
 	while (read < (SSIZE_T)bytes)
 	{
+		WLog_DBG(TAG, "Here we have read loop: %d out of %d", read, bytes);
 		const SSIZE_T tr = (SSIZE_T)bytes - read;
+		WLog_DBG(TAG, "We have tr as: %d", tr);
 		int r = (int)((tr > INT_MAX) ? INT_MAX : tr);
 		WLog_DBG(TAG, "About to do a bio read of length: %d", r);
 		int status = BIO_read(transport->frontBio, data + read, r);
