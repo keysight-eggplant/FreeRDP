@@ -140,6 +140,62 @@ void freerdp_channel_remove_open_handle_data(rdpChannelHandles* handles, DWORD o
 	}
 }
 
+void LogRdpSettings(const rdpSettings* settings)
+{
+	/* Core Parameters */
+	WLog_DBG(TAG, "--- Core Parameters ---");
+	WLog_DBG(TAG, "ServerMode: %s", settings->ServerMode ? "TRUE" : "FALSE");
+	WLog_DBG(TAG, "ShareId: %u", settings->ShareId);
+	WLog_DBG(TAG, "PduSource: %u", settings->PduSource);
+	WLog_DBG(TAG, "ServerPort: %u", settings->ServerPort);
+	WLog_DBG(TAG, "ServerHostname: %s",
+	         settings->ServerHostname ? settings->ServerHostname : "(null)");
+	WLog_DBG(TAG, "Username: %s", settings->Username ? settings->Username : "(null)");
+	WLog_DBG(TAG, "Domain: %s", settings->Domain ? settings->Domain : "(null)");
+
+	/* Client Core Data */
+	WLog_DBG(TAG, "--- Client Core Data ---");
+	WLog_DBG(TAG, "RdpVersion: %u", settings->RdpVersion);
+	WLog_DBG(TAG, "DesktopWidth: %u", settings->DesktopWidth);
+	WLog_DBG(TAG, "DesktopHeight: %u", settings->DesktopHeight);
+	WLog_DBG(TAG, "ColorDepth: %u", settings->ColorDepth);
+	WLog_DBG(TAG, "ConnectionType: %u", settings->ConnectionType);
+	WLog_DBG(TAG, "ClientBuild: %u", settings->ClientBuild);
+	WLog_DBG(TAG, "ClientHostname: %s",
+	         settings->ClientHostname ? settings->ClientHostname : "(null)");
+	WLog_DBG(TAG, "ClientProductId: %s",
+	         settings->ClientProductId ? settings->ClientProductId : "(null)");
+	WLog_DBG(TAG, "EarlyCapabilityFlags: 0x%08X", settings->EarlyCapabilityFlags);
+
+	/* Client Info (Shell + Flags) */
+	WLog_DBG(TAG, "--- Client Info ---");
+	WLog_DBG(TAG, "AlternateShell: %s",
+	         settings->AlternateShell ? settings->AlternateShell : "(null)");
+	WLog_DBG(TAG, "ShellWorkingDirectory: %s",
+	         settings->ShellWorkingDirectory ? settings->ShellWorkingDirectory : "(null)");
+	WLog_DBG(TAG, "AutoLogonEnabled: %s", settings->AutoLogonEnabled ? "TRUE" : "FALSE");
+	WLog_DBG(TAG, "CompressionEnabled: %s", settings->CompressionEnabled ? "TRUE" : "FALSE");
+	WLog_DBG(TAG, "AudioPlayback: %s", settings->AudioPlayback ? "TRUE" : "FALSE");
+	WLog_DBG(TAG, "AudioCapture: %s", settings->AudioCapture ? "TRUE" : "FALSE");
+	WLog_DBG(TAG, "RemoteConsoleAudio: %s", settings->RemoteConsoleAudio ? "TRUE" : "FALSE");
+	WLog_DBG(TAG, "PerformanceFlags: 0x%08X", settings->PerformanceFlags);
+
+	/* Client Security */
+	WLog_DBG(TAG, "--- Client Security ---");
+	WLog_DBG(TAG, "UseRdpSecurityLayer: %s", settings->UseRdpSecurityLayer ? "TRUE" : "FALSE");
+	WLog_DBG(TAG, "EncryptionMethods: 0x%08X", settings->EncryptionMethods);
+	WLog_DBG(TAG, "EncryptionLevel: %u", settings->EncryptionLevel);
+	WLog_DBG(TAG, "TlsSecurity: %s", settings->TlsSecurity ? "TRUE" : "FALSE");
+	WLog_DBG(TAG, "NlaSecurity: %s", settings->NlaSecurity ? "TRUE" : "FALSE");
+	WLog_DBG(TAG, "RdpSecurity: %s", settings->RdpSecurity ? "TRUE" : "FALSE");
+	WLog_DBG(TAG, "Authentication: %s", settings->Authentication ? "TRUE" : "FALSE");
+	WLog_DBG(TAG, "RequestedProtocols: 0x%08X", settings->RequestedProtocols);
+	WLog_DBG(TAG, "SelectedProtocol: 0x%08X", settings->SelectedProtocol);
+	WLog_DBG(TAG, "NegotiationFlags: 0x%08X", settings->NegotiationFlags);
+	WLog_DBG(TAG, "NegotiateSecurityLayer: %s",
+	         settings->NegotiateSecurityLayer ? "TRUE" : "FALSE");
+}
+
 /** Creates a new connection based on the settings found in the "instance" parameter
  *  It will use the callbacks registered on the structure to process the pre/post connect operations
  *  that the caller requires.
@@ -174,6 +230,7 @@ BOOL freerdp_connect(freerdp* instance)
 
 	rdp = instance->context->rdp;
 	settings = instance->settings;
+	LogRdpSettings(settings);
 
 	if (!freerdp_settings_set_default_order_support(settings))
 		return FALSE;
