@@ -1831,9 +1831,12 @@ static SECURITY_STATUS nla_encrypt_ts_credentials(rdpNla* nla)
 	{
 		/* IMPORTANT: EncryptMessage may not use all the signature space, so we need to shrink the
 		 * excess between the buffers */
+		WLog_DBG(TAG, "We are about to shrink the encryptmessage signature space");
 		MoveMemory(((BYTE*)Buffers[0].pvBuffer) + Buffers[0].cbBuffer, Buffers[1].pvBuffer,
 		           Buffers[1].cbBuffer);
 		nla->authInfo.cbBuffer = Buffers[0].cbBuffer + Buffers[1].cbBuffer;
+		// ets just dump auth info pvbuffer
+		winpr_HexDump(TAG, WLOG_DEBUG, nla->authInfo.pvBuffer, nla->authInfo.cbBuffer);
 	}
 
 	return SEC_E_OK;
@@ -1992,6 +1995,7 @@ BOOL nla_send(rdpNla* nla, const char* msg)
 	length = nego_tokens_length + pub_key_auth_length + auth_info_length +
 	         error_code_context_length + error_code_length + client_nonce_length;
 	ts_request_length = nla_sizeof_ts_request(length);
+	WLog_DBG(TAG, "Attempting to start a stream with ts_request_length: %d", ts_request_length);
 	s = Stream_New(NULL, ber_sizeof_sequence(ts_request_length));
 
 	if (!s)
@@ -2001,6 +2005,10 @@ BOOL nla_send(rdpNla* nla, const char* msg)
 	}
 
 	WLog_DBG(TAG, "We are about to start TSRequest process");
+	WLog_DBG(TAG, "Nego tokens length: %d", nego_tokens_length);
+	WLog_DBG(TAG, "Pub Key AUth length: %d", pub_key_auth_length);
+	WLog_DBG(TAG, "Auth Info Length: %d", auth_info_length);
+	WLog_DBG(TAG, "Client noonce length: %d", client_nonce_length);
 	/* TSRequest */
 	ber_write_sequence_tag(s, ts_request_length); /* SEQUENCE */
 	/* [0] version */
@@ -2055,6 +2063,8 @@ BOOL nla_send(rdpNla* nla, const char* msg)
 	/* [4] errorCode (INTEGER) */
 	if (error_code_length > 0)
 	{
+		WLog_DBG(TAG, "Writing error code into TSRequest of length: %d!!!!!!", error_code_length);
+		WLog_DBG(TAG, "Actual error code: %d", nla->errorCode);
 		ber_write_contextual_tag(s, 4, error_code_length, TRUE);
 		ber_write_integer(s, nla->errorCode);
 	}
