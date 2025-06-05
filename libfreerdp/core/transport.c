@@ -593,6 +593,14 @@ static SSIZE_T transport_read_layer(rdpTransport* transport, BYTE* data, size_t 
 					return -1;
 				}
 
+				WLog_DBG(TAG, "We are about to call error in BIO_read in transport read layer. "
+				              "Current State:");
+				WLog_DBG(TAG, "We have current read: %d", read);
+				WLog_DBG(TAG, "We have current bytes: %d", bytes);
+				WLog_DBG(TAG, "We have current status: %d", status);
+				WLog_DBG(TAG, "We have current !transport->FrontBio: %d", !transport->frontBio);
+				WLog_DBG(TAG, "We have current !BIO_should_retry(transport->frontBio: %d",
+				         !BIO_should_retry(transport->frontBio));
 				WLog_ERR_BIO(transport, "BIO_read", transport->frontBio);
 				transport->layer = TRANSPORT_LAYER_CLOSED;
 				freerdp_set_last_error_if_not(transport->context,
