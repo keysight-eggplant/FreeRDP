@@ -1775,16 +1775,19 @@ rdpTls* tls_new(rdpSettings* settings)
 		WLog_DBG(TAG, "We have certifacte_store_file: %s", tls->certificate_store->file);
 		WLog_DBG(TAG, "We have certifacte_store_legacy_file: %s",
 		         tls->certificate_store->legacy_file);
-		WLog_DBG(TAG, "We have certifacte_store_data_hostname: %s",
-		         tls->certificate_store->certificate_data->hostname);
-		WLog_DBG(TAG, "We have certifacte_store_data_port: %d",
-		         tls->certificate_store->certificate_data->port);
-		WLog_DBG(TAG, "We have certifacte_store_data_subjet: %s",
-		         tls->certificate_store->certificate_data->subject);
-		WLog_DBG(TAG, "We have certifacte_store_data_issuer: %s",
-		         tls->certificate_store->certificate_data->issuer);
-		WLog_DBG(TAG, "We have certifacte_store_data_fingerpint: %s",
-		         tls->certificate_store->certificate_data->fingerprint);
+		if (tls->certificate_store->certificate_data != NULL)
+		{
+			WLog_DBG(TAG, "We have certifacte_store_data_hostname: %s",
+			         tls->certificate_store->certificate_data->hostname);
+			WLog_DBG(TAG, "We have certifacte_store_data_port: %d",
+			         tls->certificate_store->certificate_data->port);
+			WLog_DBG(TAG, "We have certifacte_store_data_subjet: %s",
+			         tls->certificate_store->certificate_data->subject);
+			WLog_DBG(TAG, "We have certifacte_store_data_issuer: %s",
+			         tls->certificate_store->certificate_data->issuer);
+			WLog_DBG(TAG, "We have certifacte_store_data_fingerpint: %s",
+			         tls->certificate_store->certificate_data->fingerprint);
+		}
 
 		if (!tls->certificate_store)
 			goto out_free;
