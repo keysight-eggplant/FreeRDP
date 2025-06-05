@@ -706,6 +706,7 @@ static BOOL tls_prepare(rdpTls* tls, BIO* underlying, SSL_METHOD* method, int op
 
 	if (settings->AllowedTlsCiphers)
 	{
+		WLog_DBG(TAG, "We are allowing tls ciphers");
 		if (!SSL_CTX_set_cipher_list(tls->ctx, settings->AllowedTlsCiphers))
 		{
 			WLog_ERR(TAG, "SSL_CTX_set_cipher_list %s failed", settings->AllowedTlsCiphers);
@@ -886,6 +887,8 @@ int tls_connect(rdpTls* tls, BIO* underlying)
 	 */
 	options |= SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS;
 
+	WLog_DBG(TAG, "We currently have tls options after windows rdp needsd at: %d", options);
+
 	if (!tls_prep(tls, underlying, options, TRUE))
 		return 0;
 
@@ -905,7 +908,9 @@ BOOL tls_prep(rdpTls* tls, BIO* underlying, int options, BOOL clientMode)
 	options |= SSL_OP_NO_SSLv3;
 
 	return tls_prepare(tls, underlying, SSLv23_client_method(), options, clientMode);
+	WLog_DBG(TAG, "We are using low ssl version so we disable sslv2 and sslv3");
 #else
+	WLog_DBG(TAG, "We are using high openssll so we are preparing tls");
 	return tls_prepare(tls, underlying, TLS_client_method(), options, clientMode);
 #endif
 }
@@ -1766,6 +1771,20 @@ rdpTls* tls_new(rdpSettings* settings)
 	if (!settings->ServerMode)
 	{
 		tls->certificate_store = certificate_store_new(settings);
+		WLog_DBG(TAG, "WE have certificatE_store_path at: %s", tls->certificate_store->path);
+		WLog_DBG(TAG, "We have certifacte_store_file: %s", tls->certificate_store->file);
+		WLog_DBG(TAG, "We have certifacte_store_legacy_file: %s",
+		         tls->certificate_store->legacy_file);
+		WLog_DBG(TAG, "We have certifacte_store_data_hostname: %s",
+		         tls->certificate_store->certificate_data->hostname);
+		WLog_DBG(TAG, "We have certifacte_store_data_port: %d",
+		         tls->certificate_store->certificate_data->port);
+		WLog_DBG(TAG, "We have certifacte_store_data_subjet: %s",
+		         tls->certificate_store->certificate_data->subject);
+		WLog_DBG(TAG, "We have certifacte_store_data_issuer: %s",
+		         tls->certificate_store->certificate_data->issuer);
+		WLog_DBG(TAG, "We have certifacte_store_data_fingerpint: %s",
+		         tls->certificate_store->certificate_data->fingerprint);
 
 		if (!tls->certificate_store)
 			goto out_free;

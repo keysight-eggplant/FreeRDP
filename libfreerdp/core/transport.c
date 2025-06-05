@@ -267,6 +267,7 @@ BOOL transport_connect_tls(rdpTransport* transport)
 	rdpTls* tls = NULL;
 	rdpContext* context = transport->context;
 	rdpSettings* settings = transport->settings;
+	WLog_DBG(TAG, "Here we have transport_connect_tls");
 
 	if (!(tls = tls_new(settings)))
 		return FALSE;
@@ -274,12 +275,19 @@ BOOL transport_connect_tls(rdpTransport* transport)
 	transport->tls = tls;
 
 	if (transport->GatewayEnabled)
+	{
 		transport->layer = TRANSPORT_LAYER_TSG_TLS;
+	}
 	else
+	{
+		WLog_DBG(TAG, "We are using transport layer tls");
 		transport->layer = TRANSPORT_LAYER_TLS;
+	}
 
 	tls->hostname = settings->ServerHostname;
 	tls->port = settings->ServerPort;
+	WLog_DBG(TAG, "TLS hostname is: %s", tls->hostname);
+	WLog_DBG(TAG, "TLS port is: %d", tls->port);
 
 	if (tls->port == 0)
 		tls->port = 3389;
