@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 
+#include "winpr/wlog.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -1064,10 +1065,10 @@ BOOL tls_send_alert(rdpTls* tls)
 	if (!tls->ssl)
 		return TRUE;
 
-		/**
-		 * FIXME: The following code does not work on OpenSSL > 1.1.0 because the
-		 *        SSL struct is opaqe now
-		 */
+	/**
+	 * FIXME: The following code does not work on OpenSSL > 1.1.0 because the
+	 *        SSL struct is opaqe now
+	 */
 #if (!defined(LIBRESSL_VERSION_NUMBER) && (OPENSSL_VERSION_NUMBER < 0x10100000L)) || \
     (defined(LIBRESSL_VERSION_NUMBER) && (LIBRESSL_VERSION_NUMBER <= 0x2080300fL))
 
@@ -1357,7 +1358,9 @@ static BOOL tls_extract_pem(CryptoCert cert, BYTE** PublicKey, DWORD* PublicKeyL
 		goto fail;
 	}
 
+	WLog_DBG(TAG, "Calling BIO_read in tls_extra_pem with size: %d", length);
 	status = BIO_read(bio, pemCert, length);
+	WLog_DBG(TAG, "Status of calling BIO_read is %d", status);
 
 	if (status < 0)
 	{
@@ -1379,7 +1382,10 @@ static BOOL tls_extract_pem(CryptoCert cert, BYTE** PublicKey, DWORD* PublicKeyL
 
 		length = new_len;
 		pemCert = new_cert;
+		WLog_DBG(TAG, "We are calling BIO_read in tls_extra pem with offset with size: %d",
+		         length - offset);
 		status = BIO_read(bio, &pemCert[offset], length - offset);
+		WLog_DBG(TAG, "Status of calling BIO_read is %d", status);
 
 		if (status < 0)
 			break;

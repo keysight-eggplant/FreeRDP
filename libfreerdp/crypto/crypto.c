@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 
+#include "winpr/wlog.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -306,6 +307,7 @@ static char* crypto_print_name(X509_NAME* name)
 {
 	char* buffer = NULL;
 	BIO* outBIO = BIO_new(BIO_s_mem());
+	int status = 0;
 
 	if (X509_NAME_print_ex(outBIO, name, 0, XN_FLAG_ONELINE) > 0)
 	{
@@ -315,7 +317,9 @@ static char* crypto_print_name(X509_NAME* name)
 		if (!buffer)
 			return NULL;
 
-		BIO_read(outBIO, buffer, size);
+		WLog_DBG(TAG, "BIO_read in crypto_print_name with length: %d", size);
+		status = BIO_read(outBIO, buffer, size);
+		WLog_DBG(TAG, "Status of BIO_read is %d", status);
 	}
 
 	BIO_free_all(outBIO);

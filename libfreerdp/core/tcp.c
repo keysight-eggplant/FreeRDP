@@ -535,7 +535,9 @@ static int transport_bio_buffered_read(BIO* bio, char* buf, int size)
 	BIO* next_bio = BIO_next(bio);
 	ptr->readBlocked = FALSE;
 	BIO_clear_flags(bio, BIO_FLAGS_READ);
+	WLog_DBG(TAG, "We are calling BIO_read in transport_bio_buffered_read with size: %d", size);
 	status = BIO_read(next_bio, buf, size);
+	WLog_DBG(TAG, "Result of calling BIO_read is %d", status);
 
 	if (status <= 0)
 	{
