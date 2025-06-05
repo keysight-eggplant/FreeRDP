@@ -589,11 +589,11 @@ static SSIZE_T transport_read_layer(rdpTransport* transport, BYTE* data, size_t 
 					return -1;
 				}
 
-				WLog_ERR_BIO(transport, "BIO_read", transport->frontBio);
-				transport->layer = TRANSPORT_LAYER_CLOSED;
-				freerdp_set_last_error_if_not(transport->context,
-				                              FREERDP_ERROR_CONNECT_TRANSPORT_FAILED);
-				return -1;
+				// WLog_ERR_BIO(transport, "BIO_read", transport->frontBio);
+				// transport->layer = TRANSPORT_LAYER_CLOSED;
+				// freerdp_set_last_error_if_not(transport->context,
+				//                               FREERDP_ERROR_CONNECT_TRANSPORT_FAILED);
+				// return -1;
 			}
 
 			/* non blocking will survive a partial read */
