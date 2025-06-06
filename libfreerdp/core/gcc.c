@@ -19,6 +19,7 @@
  * limitations under the License.
  */
 
+#include "winpr/wlog.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -927,20 +928,23 @@ void gcc_write_client_core_data(wStream* s, rdpMcs* mcs)
 	WCHAR* clientDigProductId = NULL;
 	int clientDigProductIdLength;
 	rdpSettings* settings = mcs->settings;
+
+	WLog_DBG(TAG, "Entering gcc_write_client_core_data");
+	WLog_DBG(TAG, "Settings: RdpVersion=%" PRIu32 ", DesktopWidth=%" PRIu16 ", DesktopHeight=%" PRIu16,
+	         settings->RdpVersion, settings->DesktopWidth, settings->DesktopHeight);
+
 	gcc_write_user_data_header(s, CS_CORE, 234);
 	clientNameLength = ConvertToUnicode(CP_UTF8, 0, settings->ClientHostname, -1, &clientName, 0);
 	clientDigProductIdLength =
 	    ConvertToUnicode(CP_UTF8, 0, settings->ClientProductId, -1, &clientDigProductId, 0);
-	Stream_Write_UINT32(s, settings->RdpVersion);    /* Version */
-	Stream_Write_UINT16(s, settings->DesktopWidth);  /* DesktopWidth */
-	Stream_Write_UINT16(s, settings->DesktopHeight); /* DesktopHeight */
-	Stream_Write_UINT16(s,
-	                    RNS_UD_COLOR_8BPP); /* ColorDepth, ignored because of postBeta2ColorDepth */
-	Stream_Write_UINT16(s, RNS_UD_SAS_DEL); /* SASSequence (Secure Access Sequence) */
-	Stream_Write_UINT32(s, settings->KeyboardLayout); /* KeyboardLayout */
-	Stream_Write_UINT32(s, settings->ClientBuild);    /* ClientBuild */
 
-	/* clientName (32 bytes, null-terminated unicode, truncated to 15 characters) */
+	Stream_Write_UINT32(s, settings->RdpVersion);
+	Stream_Write_UINT16(s, settings->DesktopWidth);
+	Stream_Write_UINT16(s, settings->DesktopHeight);
+	Stream_Write_UINT16(s, RNS_UD_COLOR_8BPP);
+	Stream_Write_UINT16(s, RNS_UD_SAS_DEL);
+	Stream_Write_UINT32(s, settings->KeyboardLayout);
+	Stream_Write_UINT32(s, settings->ClientBuild);
 
 	if (clientNameLength >= 16)
 	{
@@ -948,16 +952,20 @@ void gcc_write_client_core_data(wStream* s, rdpMcs* mcs)
 		clientName[clientNameLength - 1] = 0;
 	}
 
+	WLog_DBG(TAG, "ClientHostname=%s, clientNameLength=%d", settings->ClientHostname, clientNameLength);
+
 	Stream_Write(s, clientName, (clientNameLength * 2));
 	Stream_Zero(s, 32 - (clientNameLength * 2));
 	free(clientName);
-	Stream_Write_UINT32(s, settings->KeyboardType);        /* KeyboardType */
-	Stream_Write_UINT32(s, settings->KeyboardSubType);     /* KeyboardSubType */
-	Stream_Write_UINT32(s, settings->KeyboardFunctionKey); /* KeyboardFunctionKey */
-	Stream_Zero(s, 64);                                    /* imeFileName */
-	Stream_Write_UINT16(s, RNS_UD_COLOR_8BPP);             /* postBeta2ColorDepth */
-	Stream_Write_UINT16(s, 1);                             /* clientProductID */
-	Stream_Write_UINT32(s, 0); /* serialNumber (should be initialized to 0) */
+
+	Stream_Write_UINT32(s, settings->KeyboardType);
+	Stream_Write_UINT32(s, settings->KeyboardSubType);
+	Stream_Write_UINT32(s, settings->KeyboardFunctionKey);
+	Stream_Zero(s, 64);
+	Stream_Write_UINT16(s, RNS_UD_COLOR_8BPP);
+	Stream_Write_UINT16(s, 1);
+	Stream_Write_UINT32(s, 0);
+
 	highColorDepth = MIN(settings->ColorDepth, 24);
 	supportedColorDepths = RNS_UD_24BPP_SUPPORT | RNS_UD_16BPP_SUPPORT | RNS_UD_15BPP_SUPPORT;
 	earlyCapabilityFlags = RNS_UD_CS_SUPPORT_ERRINFO_PDU;
@@ -991,10 +999,11 @@ void gcc_write_client_core_data(wStream* s, rdpMcs* mcs)
 	if (settings->SupportStatusInfoPdu)
 		earlyCapabilityFlags |= RNS_UD_CS_SUPPORT_STATUSINFO_PDU;
 
-	Stream_Write_UINT16(s, highColorDepth);       /* highColorDepth */
-	Stream_Write_UINT16(s, supportedColorDepths); /* supportedColorDepths */
-	Stream_Write_UINT16(s, earlyCapabilityFlags); /* earlyCapabilityFlags */
+	WLog_DBG(TAG, "highColorDepth=%" PRIu16 ", supportedColorDepths=0x%04x, earlyCapabilityFlags=0x%04x", highColorDepth, supportedColorDepths, earlyCapabilityFlags);
 
+	Stream_Write_UINT16(s, highColorDepth);
+	Stream_Write_UINT16(s, supportedColorDepths);
+	Stream_Write_UINT16(s, earlyCapabilityFlags);
 	/* clientDigProductId (64 bytes, null-terminated unicode, truncated to 31 characters) */
 	if (clientDigProductIdLength >= 32)
 	{
@@ -1002,17 +1011,33 @@ void gcc_write_client_core_data(wStream* s, rdpMcs* mcs)
 		clientDigProductId[clientDigProductIdLength - 1] = 0;
 	}
 
+	WLog_DBG(TAG, "ClientProductId=%s, clientDigProductIdLength=%d", settings->ClientProductId, clientDigProductIdLength);
+
 	Stream_Write(s, clientDigProductId, (clientDigProductIdLength * 2));
 	Stream_Zero(s, 64 - (clientDigProductIdLength * 2));
 	free(clientDigProductId);
-	Stream_Write_UINT8(s, connectionType);                   /* connectionType */
-	Stream_Write_UINT8(s, 0);                                /* pad1octet */
-	Stream_Write_UINT32(s, settings->SelectedProtocol);      /* serverSelectedProtocol */
-	Stream_Write_UINT32(s, settings->DesktopPhysicalWidth);  /* desktopPhysicalWidth */
-	Stream_Write_UINT32(s, settings->DesktopPhysicalHeight); /* desktopPhysicalHeight */
-	Stream_Write_UINT16(s, settings->DesktopOrientation);    /* desktopOrientation */
-	Stream_Write_UINT32(s, settings->DesktopScaleFactor);    /* desktopScaleFactor */
-	Stream_Write_UINT32(s, settings->DeviceScaleFactor);     /* deviceScaleFactor */
+
+	Stream_Write_UINT8(s, connectionType);
+	Stream_Write_UINT8(s, 0);
+	WLog_DBG(TAG, "connectionType=%" PRIu8, connectionType);
+
+	Stream_Write_UINT32(s, settings->SelectedProtocol);
+	WLog_DBG(TAG, "SelectedProtocol=%" PRIu32, settings->SelectedProtocol);
+
+	Stream_Write_UINT32(s, settings->DesktopPhysicalWidth);
+	Stream_Write_UINT32(s, settings->DesktopPhysicalHeight);
+	WLog_DBG(TAG, "DesktopPhysicalWidth=%" PRIu32 ", DesktopPhysicalHeight=%" PRIu32,
+	         settings->DesktopPhysicalWidth, settings->DesktopPhysicalHeight);
+
+	Stream_Write_UINT16(s, settings->DesktopOrientation);
+	WLog_DBG(TAG, "DesktopOrientation=%" PRIu16, settings->DesktopOrientation);
+
+	Stream_Write_UINT32(s, settings->DesktopScaleFactor);
+	Stream_Write_UINT32(s, settings->DeviceScaleFactor);
+	WLog_DBG(TAG, "DesktopScaleFactor=%" PRIu32 ", DeviceScaleFactor=%" PRIu32,
+	         settings->DesktopScaleFactor, settings->DeviceScaleFactor);
+
+	WLog_DBG(TAG, "Leaving gcc_write_client_core_data");
 }
 
 BOOL gcc_read_server_core_data(wStream* s, rdpMcs* mcs)
@@ -1105,14 +1130,18 @@ void gcc_write_client_security_data(wStream* s, rdpMcs* mcs)
 
 	if (settings->UseRdpSecurityLayer)
 	{
+		WLog_DBG(TAG, "Using rdp security layer in gcc_write_client_security_data");
 		Stream_Write_UINT32(s, settings->EncryptionMethods); /* encryptionMethods */
+		WLog_DBG(TAG, "EncryptionMethods=0x%08" PRIX32 "", settings->EncryptionMethods);
 		Stream_Write_UINT32(s, 0);                           /* extEncryptionMethods */
 	}
 	else
 	{
+		WLog_DBG(TAG, "Using french locale in gcc_write_client_security_data");
 		/* French locale, disable encryption */
 		Stream_Write_UINT32(s, 0);                           /* encryptionMethods */
 		Stream_Write_UINT32(s, settings->EncryptionMethods); /* extEncryptionMethods */
+		WLog_DBG(TAG, "EncryptionMethods=0x%08" PRIX32 "", settings->EncryptionMethods);
 	}
 }
 
@@ -1588,6 +1617,8 @@ void gcc_write_client_network_data(wStream* s, rdpMcs* mcs)
 	if (mcs->channelCount > 0)
 	{
 		length = mcs->channelCount * 12 + 8;
+		WLog_DBG(TAG, "Writing client network data with %" PRIu32 " channels", mcs->channelCount);
+		WLog_DBG(TAG, "Total length: %" PRIu16 " bytes", length);
 		gcc_write_user_data_header(s, CS_NET, length);
 		Stream_Write_UINT32(s, mcs->channelCount); /* channelCount */
 
@@ -1719,7 +1750,9 @@ void gcc_write_client_cluster_data(wStream* s, rdpMcs* mcs)
 	if (settings->RedirectSmartCards)
 		flags |= REDIRECTED_SMARTCARD;
 
+	WLog_DBG(TAG, "Here is flags: 0x%08" PRIX32 "", flags);
 	Stream_Write_UINT32(s, flags);                         /* flags */
+	WLog_DBG(TAG, "RedirectedSessionId: %" PRIu32 "", settings->RedirectedSessionId);
 	Stream_Write_UINT32(s, settings->RedirectedSessionId); /* redirectedSessionID */
 }
 
@@ -1804,6 +1837,7 @@ BOOL gcc_write_client_monitor_data(wStream* s, rdpMcs* mcs)
 		if (!Stream_EnsureRemainingCapacity(s, length))
 			return FALSE;
 
+		WLog_DBG(TAG, "Writing client monitor data with %" PRIu32 " monitors", settings->MonitorCount);
 		gcc_write_user_data_header(s, CS_MONITOR, length);
 		Stream_Write_UINT32(s, 0);                      /* flags */
 		Stream_Write_UINT32(s, settings->MonitorCount); /* monitorCount */
@@ -1816,6 +1850,8 @@ BOOL gcc_write_client_monitor_data(wStream* s, rdpMcs* mcs)
 			{
 				baseX = settings->MonitorDefArray[i].x;
 				baseY = settings->MonitorDefArray[i].y;
+				WLog_DBG(TAG, "Primary monitor found at (%" PRId32 ", %" PRId32 ")",
+				         baseX, baseY);
 				break;
 			}
 		}
@@ -1827,6 +1863,8 @@ BOOL gcc_write_client_monitor_data(wStream* s, rdpMcs* mcs)
 			right = left + settings->MonitorDefArray[i].width - 1;
 			bottom = top + settings->MonitorDefArray[i].height - 1;
 			flags = settings->MonitorDefArray[i].is_primary ? MONITOR_PRIMARY : 0;
+			WLog_DBG(TAG, "Monitor %d: (%" PRId32 ", %" PRId32 ") - (%" PRId32 ", %" PRId32
+			                 ") flags: 0x%08" PRIX32 "", i, left, top, right, bottom, flags);
 			Stream_Write_UINT32(s, left);   /* left */
 			Stream_Write_UINT32(s, top);    /* top */
 			Stream_Write_UINT32(s, right);  /* right */
@@ -1895,12 +1933,20 @@ BOOL gcc_write_client_monitor_extended_data(wStream* s, rdpMcs* mcs)
 			return FALSE;
 
 		gcc_write_user_data_header(s, CS_MONITOR_EX, length);
+		WLog_DBG(TAG, "Writing client monitor extended data with %" PRIu32 " monitors",
+		         settings->MonitorCount);
 		Stream_Write_UINT32(s, 0);                      /* flags */
 		Stream_Write_UINT32(s, 20);                     /* monitorAttributeSize */
 		Stream_Write_UINT32(s, settings->MonitorCount); /* monitorCount */
 
 		for (i = 0; i < settings->MonitorCount; i++)
 		{
+			WLog_DBG(TAG, "Monitor %d: (%" PRId32 ", %" PRId32 ") - (%" PRId32 ", %" PRId32
+			                 ") flags: 0x%08" PRIX32 "", i, settings->MonitorDefArray[i].x,
+			                 settings->MonitorDefArray[i].y,
+			                 settings->MonitorDefArray[i].x + settings->MonitorDefArray[i].width - 1,
+			                 settings->MonitorDefArray[i].y + settings->MonitorDefArray[i].height - 1,
+			                 settings->MonitorDefArray[i].is_primary ? MONITOR_PRIMARY : 0);
 			Stream_Write_UINT32(
 			    s, settings->MonitorDefArray[i].attributes.physicalWidth); /* physicalWidth */
 			Stream_Write_UINT32(
@@ -1951,6 +1997,11 @@ void gcc_write_client_message_channel_data(wStream* s, rdpMcs* mcs)
 	if (settings->NetworkAutoDetect || settings->SupportHeartbeatPdu ||
 	    settings->SupportMultitransport)
 	{
+		WLog_DBG(TAG, "We have settings->NetworkAutoDetect=%" PRId32
+		                 " settings->SupportHeartbeatPdu=%" PRId32
+		                 " settings->SupportMultitransport=%" PRId32,
+		         settings->NetworkAutoDetect, settings->SupportHeartbeatPdu,
+		         settings->SupportMultitransport);
 		gcc_write_user_data_header(s, CS_MCS_MSGCHANNEL, 8);
 		Stream_Write_UINT32(s, 0); /* flags */
 	}
@@ -2011,6 +2062,8 @@ void gcc_write_client_multitransport_channel_data(wStream* s, rdpMcs* mcs)
 {
 	rdpSettings* settings = mcs->settings;
 
+	WLog_DBG(TAG, "Setting settings->MultitransportFlags=0x%08" PRIX32 "",
+	         settings->MultitransportFlags);
 	gcc_write_user_data_header(s, CS_MULTITRANSPORT, 8);
 	Stream_Write_UINT32(s, settings->MultitransportFlags); /* flags */
 }

@@ -214,6 +214,7 @@ static int mcs_initialize_client_channels(rdpMcs* mcs, rdpSettings* settings)
 
 	if (mcs->channelCount > mcs->channelMaxCount)
 		mcs->channelCount = mcs->channelMaxCount;
+	WLog_DBG(TAG, "Here we have channel count for mcs: %d", mcs->channelCount);
 
 	ZeroMemory(mcs->channels, sizeof(rdpMcsChannel) * mcs->channelMaxCount);
 
@@ -221,6 +222,8 @@ static int mcs_initialize_client_channels(rdpMcs* mcs, rdpSettings* settings)
 	{
 		CopyMemory(mcs->channels[index].Name, settings->ChannelDefArray[index].name, 8);
 		mcs->channels[index].options = settings->ChannelDefArray[index].options;
+		WLog_DBG(TAG, "Here we have the name of the channel: %s with options: %d",
+		         mcs->channels[index].Name, mcs->channels[index].options);
 	}
 
 	return 0;
@@ -587,6 +590,7 @@ BOOL mcs_recv_connect_initial(rdpMcs* mcs, wStream* s)
 
 BOOL mcs_write_connect_initial(wStream* s, rdpMcs* mcs, wStream* userData)
 {
+	WLog_DBG(TAG, "mcs_write_connect_initial called with mcs=%p, userData=%p", mcs, userData);
 	size_t length;
 	wStream* tmps;
 	BOOL ret = FALSE;
@@ -603,10 +607,13 @@ BOOL mcs_write_connect_initial(wStream* s, rdpMcs* mcs, wStream* userData)
 	}
 
 	/* callingDomainSelector (OCTET_STRING) */
+	WLog_DBG(TAG, "callingDomainSelector: %s", callingDomainSelector);
 	ber_write_octet_string(tmps, callingDomainSelector, sizeof(callingDomainSelector));
 	/* calledDomainSelector (OCTET_STRING) */
+	WLog_DBG(TAG, "calledDomainSelector: %s", calledDomainSelector);
 	ber_write_octet_string(tmps, calledDomainSelector, sizeof(calledDomainSelector));
 	/* upwardFlag (BOOLEAN) */
+	WLog_DBG(TAG, "upwardFlag: TRUE");
 	ber_write_BOOL(tmps, TRUE);
 
 	/* targetParameters (DomainParameters) */
@@ -624,7 +631,9 @@ BOOL mcs_write_connect_initial(wStream* s, rdpMcs* mcs, wStream* userData)
 	/* userData (OCTET_STRING) */
 	ber_write_octet_string(tmps, Stream_Buffer(userData), Stream_GetPosition(userData));
 	length = Stream_GetPosition(tmps);
+	WLog_DBG(TAG, "mcs_write_connect_initial at Stream_GetPosition: length=%zu", length);
 	/* Connect-Initial (APPLICATION 101, IMPLICIT SEQUENCE) */
+	WLog_DBG(TAG, "ber_write_application_tag with MCS_TYPE_CONNECT_INITIAL");
 	ber_write_application_tag(s, MCS_TYPE_CONNECT_INITIAL, length);
 	Stream_Write(s, Stream_Buffer(tmps), length);
 	ret = TRUE;
@@ -715,6 +724,7 @@ BOOL mcs_send_connect_initial(rdpMcs* mcs)
 
 	gcc_write_conference_create_request(gcc_CCrq, client_data);
 	length = Stream_GetPosition(gcc_CCrq) + 7;
+	WLog_DBG(TAG, "We are creating a stream in mcs_send_connect_initial with length: %zu", length);
 	s = Stream_New(NULL, 1024 + length);
 
 	if (!s)
@@ -736,10 +746,13 @@ BOOL mcs_send_connect_initial(rdpMcs* mcs)
 	length = (em - bm);
 	if (length > UINT16_MAX)
 		goto out;
+	WLog_DBG(TAG, "We have stream length above Stream_SetPosittion: %zu", length);
+	WLog_DBG(TAG, "We have bm position: %zu", bm);
 	Stream_SetPosition(s, bm);
 	if (!tpkt_write_header(s, (UINT16)length))
 		goto out;
 	tpdu_write_data(s);
+	WLog_DBG(TAG, "We have em position: %zu", em);
 	Stream_SetPosition(s, em);
 	Stream_SealLength(s);
 	status = transport_write(mcs->transport, s);

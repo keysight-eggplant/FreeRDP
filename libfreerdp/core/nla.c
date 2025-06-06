@@ -1802,14 +1802,17 @@ static SECURITY_STATUS nla_encrypt_ts_credentials(rdpNla* nla)
 	}
 	else if (ntlm || nego)
 	{
+		WLog_DBG(TAG, "We are for sure in ntlm || nego");
 		Buffers[0].BufferType = SECBUFFER_TOKEN; /* Signature */
 		Buffers[0].cbBuffer = nla->ContextSizes.cbSecurityTrailer;
 		Buffers[0].pvBuffer = nla->authInfo.pvBuffer;
+		WLog_DBG(TAG, "We are now dumping secbuffer token");
 		winpr_HexDump(TAG, WLOG_DEBUG, nla->authInfo.pvBuffer, nla->ContextSizes.cbSecurityTrailer);
 		MoveMemory(Buffers[0].pvBuffer, nla->authInfo.pvBuffer, Buffers[0].cbBuffer);
 		Buffers[1].BufferType = SECBUFFER_DATA; /* TSCredentials */
 		Buffers[1].cbBuffer = nla->tsCredentials.cbBuffer;
 		Buffers[1].pvBuffer = &((BYTE*)nla->authInfo.pvBuffer)[Buffers[0].cbBuffer];
+		WLog_DBG(TAG, "We are now dumping secbuffer data");
 		winpr_HexDump(TAG, WLOG_DEBUG, &((BYTE*)nla->authInfo.pvBuffer)[Buffers[0].cbBuffer],
 		              nla->tsCredentials.cbBuffer);
 		CopyMemory(Buffers[1].pvBuffer, nla->tsCredentials.pvBuffer, Buffers[1].cbBuffer);
