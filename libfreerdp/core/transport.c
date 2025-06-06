@@ -824,6 +824,42 @@ int transport_read_pdu(rdpTransport* transport, wStream* s)
 	return Stream_Length(s);
 }
 
+static void hex_dump_stream(const char* tag, const wStream* s)
+{
+	const BYTE* buffer = Stream_Buffer(s);
+	size_t length = Stream_GetPosition(s);
+	char line[80];
+	size_t offset = 0;
+
+	while (offset < length)
+	{
+		size_t i, lineLen = (length - offset > 16) ? 16 : (length - offset);
+		char* ptr = line;
+
+		ptr += sprintf(ptr, "%04zx ", offset);
+
+		for (i = 0; i < 16; i++)
+		{
+			if (i < lineLen)
+				ptr += sprintf(ptr, "%02X ", buffer[offset + i]);
+			else
+				ptr += sprintf(ptr, "   ");
+		}
+
+		ptr += sprintf(ptr, " ");
+
+		for (i = 0; i < lineLen; i++)
+		{
+			BYTE c = buffer[offset + i];
+			*ptr++ = (c >= 32 && c <= 126) ? c : '.';
+		}
+		*ptr = '\0';
+
+		WLog_DBG(tag, "%s", line);
+		offset += lineLen;
+	}
+}
+
 int transport_write(rdpTransport* transport, wStream* s)
 {
 	size_t length;
@@ -843,6 +879,8 @@ int transport_write(rdpTransport* transport, wStream* s)
 		freerdp_set_last_error_if_not(transport->context, FREERDP_ERROR_CONNECT_TRANSPORT_FAILED);
 		goto fail;
 	}
+	WLog_DBG(TAG, "We are about to write out our wstream");
+	hex_dump_stream(TAG, s);
 
 	EnterCriticalSection(&(transport->WriteLock));
 	length = Stream_GetPosition(s);
