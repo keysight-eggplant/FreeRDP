@@ -17,6 +17,7 @@
  * limitations under the License.
  */
 
+#include "winpr/wlog.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -426,6 +427,7 @@ ntlm_AcceptSecurityContext(PCredHandle phCredential, PCtxtHandle phContext, PSec
 	{
 		case NTLM_STATE_INITIAL:
 		{
+			WLog_DBG(TAG, "We are in ntlm state initial");
 			ntlm_change_state(context, NTLM_STATE_NEGOTIATE);
 
 			if (!pInput)
@@ -442,12 +444,17 @@ ntlm_AcceptSecurityContext(PCredHandle phCredential, PCtxtHandle phContext, PSec
 			if (input_buffer->cbBuffer < 1)
 				return SEC_E_INVALID_TOKEN;
 
+			WLog_DBG(TAG, "So now we are about to read negotate message with size: %d",
+			         input_buffer->cbBuffer);
+			winpr_HexDump(TAG, WLOG_DEBUG, input_buffer->pvBuffer, input_buffer->cbBuffer);
+
 			status = ntlm_read_NegotiateMessage(context, input_buffer);
 			if (status != SEC_I_CONTINUE_NEEDED)
 				return status;
 
 			if (ntlm_get_state(context) == NTLM_STATE_CHALLENGE)
 			{
+				WLog_DBG(TAG, "We are now in ntlm state challenge");
 				if (!pOutput)
 					return SEC_E_INVALID_TOKEN;
 
@@ -462,6 +469,10 @@ ntlm_AcceptSecurityContext(PCredHandle phCredential, PCtxtHandle phContext, PSec
 				if (output_buffer->cbBuffer < 1)
 					return SEC_E_INSUFFICIENT_MEMORY;
 
+				WLog_DBG(TAG, "So now we have output buffer in ntlm state challenge with size: %d",
+				         output_buffer->cbBuffer);
+				winpr_HexDump(TAG, WLOG_DEBUG, output_buffer->pvBuffer, output_buffer->cbBuffer);
+
 				return ntlm_write_ChallengeMessage(context, output_buffer);
 			}
 
@@ -470,6 +481,7 @@ ntlm_AcceptSecurityContext(PCredHandle phCredential, PCtxtHandle phContext, PSec
 		break;
 		case NTLM_STATE_AUTHENTICATE:
 		{
+			WLog_DBG(TAG, "We are now in ntlm state authenticate");
 			if (!pInput)
 				return SEC_E_INVALID_TOKEN;
 
@@ -483,6 +495,10 @@ ntlm_AcceptSecurityContext(PCredHandle phCredential, PCtxtHandle phContext, PSec
 
 			if (input_buffer->cbBuffer < 1)
 				return SEC_E_INVALID_TOKEN;
+
+			WLog_DBG(TAG, "So now we have an input buffer in ntlm state authenticate with size: %d",
+			         input_buffer->cbBuffer);
+			winpr_HexDump(TAG, WLOG_DEBUG, input_buffer->pvBuffer, input_buffer->cbBuffer);
 
 			status = ntlm_read_AuthenticateMessage(context, input_buffer);
 
@@ -1296,28 +1312,28 @@ char* ntlm_negotiate_flags_string(char* buffer, size_t size, UINT32 flags)
 
 	_snprintf(buffer, size, "[0x%08" PRIx32 "] ", flags);
 
-		for (x = 0; x < 31; x++)
+	for (x = 0; x < 31; x++)
+	{
+		const UINT32 mask = 1 << x;
+		size_t len = strnlen(buffer, size);
+		if (flags & mask)
 		{
-			const UINT32 mask = 1 << x;
-			size_t len = strnlen(buffer, size);
-			if (flags & mask)
+			const char* str = ntlm_get_negotiate_string(mask);
+			const size_t flen = strlen(str);
+
+			if ((len > 0) && (buffer[len - 1] != ' '))
 			{
-				const char* str = ntlm_get_negotiate_string(mask);
-				const size_t flen = strlen(str);
-
-				if ((len > 0) && (buffer[len - 1] != ' '))
-				{
-					if (size - len < 1)
-						break;
-				    winpr_str_append("|", buffer, size, NULL);
-				    len++;
-			    }
-
-				if (size - len < flen)
+				if (size - len < 1)
 					break;
-			    winpr_str_append(str, buffer, size, NULL);
-		    }
-	    }
+				winpr_str_append("|", buffer, size, NULL);
+				len++;
+			}
+
+			if (size - len < flen)
+				break;
+			winpr_str_append(str, buffer, size, NULL);
+		}
+	}
 
 	return buffer;
 }
