@@ -335,7 +335,7 @@ BOOL transport_connect_nla(rdpTransport* transport)
 
 	if (settings->AuthenticationServiceClass)
 	{
-		if (!nla_set_service_principal(rdp->nla, nla_make_spn(settings->AuthenticationServiceClass,
+		if (!nla_set_service_principal(rdp->nla, (char *)nla_make_spn(settings->AuthenticationServiceClass,
 		                                                      settings->ServerHostname)))
 			return FALSE;
 	}
@@ -568,6 +568,14 @@ static SSIZE_T transport_read_layer(rdpTransport* transport, BYTE* data, size_t 
 
 		if (status <= 0)
 		{
+			// Have we been requested to abort the connection???
+			if (freerdp_shall_disconnect(transport->settings->instance))
+			{
+				WLog_Print(transport->log, WLOG_ERROR, "BIO_read: disconnect requested - aborting connection");
+				return -1;
+			}
+
+			// Otherwise continue trying other options...
 			if (!transport->frontBio || !BIO_should_retry(transport->frontBio))
 			{
 				/* something unexpected happened, let's close */

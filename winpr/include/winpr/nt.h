@@ -1290,6 +1290,7 @@ static INLINE NTSTATUS NTSTATUS_FROM_WIN32(long x)
 
 #endif
 
+#if !defined(__MINGW32__)
 typedef enum _FILE_INFORMATION_CLASS
 {
 	FileDirectoryInformation = 1,
@@ -1333,6 +1334,7 @@ typedef enum _FILE_INFORMATION_CLASS
 	FileValidDataLengthInformation,
 	FileShortNameInformation
 } FILE_INFORMATION_CLASS;
+#endif // !defined(__MINGW32__)
 
 #if !defined(_WIN32) || defined(_UWP)
 

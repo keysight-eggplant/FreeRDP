@@ -304,6 +304,19 @@ typedef struct _TARGET_NET_ADDRESS TARGET_NET_ADDRESS;
 #define ORIENTATION_LANDSCAPE_FLIPPED 180
 #define ORIENTATION_PORTRAIT_FLIPPED 270
 
+/* KeySpec https://docs.microsoft.com/en-us/windows/desktop/api/wincrypt/nf-wincrypt-cryptgenkey */
+#ifndef _WIN32
+#if !defined(AT_KEYEXCHANGE)
+#define AT_KEYEXCHANGE  (1)
+#endif
+#if !defined(AT_SIGNATURE)
+#define AT_SIGNATURE    (2)
+#endif
+#if !defined(AT_AUTHENTICATE)
+#define AT_AUTHENTICATE (3)
+#endif
+#endif
+
 /* ARC_CS_PRIVATE_PACKET */
 typedef struct
 {
@@ -692,20 +705,48 @@ typedef struct _RDPDR_PARALLEL RDPDR_PARALLEL;
 #define FreeRDP_Password51Length (1281)
 #define FreeRDP_SmartcardLogon (1282)
 #define FreeRDP_PromptForCredentials (1283)
-#define FreeRDP_KerberosKdc (1344)
-#define FreeRDP_KerberosRealm (1345)
-#define FreeRDP_IgnoreCertificate (1408)
-#define FreeRDP_CertificateName (1409)
-#define FreeRDP_CertificateFile (1410)
-#define FreeRDP_PrivateKeyFile (1411)
-#define FreeRDP_RdpKeyFile (1412)
-#define FreeRDP_RdpServerRsaKey (1413)
-#define FreeRDP_RdpServerCertificate (1414)
-#define FreeRDP_ExternalCertificateManagement (1415)
-#define FreeRDP_CertificateContent (1416)
-#define FreeRDP_PrivateKeyContent (1417)
-#define FreeRDP_RdpKeyContent (1418)
-#define FreeRDP_AutoAcceptCertificate (1419)
+#define FreeRDP_Pkcs11Module                                       (1284)
+#define FreeRDP_PinLoginRequired                                   (1285)
+#define FreeRDP_PinPadIsPresent                                    (1286)
+#define FreeRDP_Pin                                                (1287)
+#define FreeRDP_KeySpec                                            (1288)
+#define FreeRDP_CardName                                           (1289)
+#define FreeRDP_ReaderName                                         (1290)
+#define FreeRDP_ContainerName                                      (1291)
+#define FreeRDP_CspName                                            (1292)
+#define FreeRDP_UserHint                                           (1293)
+#define FreeRDP_DomainHint                                         (1294)
+#define FreeRDP_CredentialsType                                    (1295)
+#define FreeRDP_UserPrincipalName                                  (1296)
+#define FreeRDP_CanonicalizedUserHint                              (1297)
+#define FreeRDP_IdCertificate                                      (1298)
+#define FreeRDP_IdCertificateLength                                (1299)
+#define FreeRDP_PkinitIdentity                                     (1300)
+#define FreeRDP_PkinitAnchors                                      (1301)
+#define FreeRDP_SlotID                                             (1302)
+#define FreeRDP_TokenLabel                                         (1303)
+#define FreeRDP_TokenFlags                                         (1304)
+#define FreeRDP_KerberosStartTime                                  (1305)
+#define FreeRDP_KerberosLifeTime                                   (1306)
+#define FreeRDP_KerberosRenewableLifeTime                          (1307)
+#define FreeRDP_Pkinit                                             (1308)
+#define FreeRDP_PkinitCertificate                                  (1309)
+#define FreeRDP_Krb5Trace                                          (1310)
+#define FreeRDP_KerberosKdc                                        (1344)
+#define FreeRDP_KerberosRealm                                      (1345)
+#define FreeRDP_CrossDomainLogin                                   (1346)
+#define FreeRDP_IgnoreCertificate                                  (1408)
+#define FreeRDP_CertificateName                                    (1409)
+#define FreeRDP_CertificateFile                                    (1410)
+#define FreeRDP_PrivateKeyFile                                     (1411)
+#define FreeRDP_RdpKeyFile                                         (1412)
+#define FreeRDP_RdpServerRsaKey                                    (1413)
+#define FreeRDP_RdpServerCertificate                               (1414)
+#define FreeRDP_ExternalCertificateManagement                      (1415)
+#define FreeRDP_CertificateContent                                 (1416)
+#define FreeRDP_PrivateKeyContent                                  (1417)
+#define FreeRDP_RdpKeyContent                                      (1418)
+#define FreeRDP_AutoAcceptCertificate                              (1419)
 #define FreeRDP_AutoDenyCertificate (1420)
 #define FreeRDP_CertificateAcceptedFingerprints (1421)
 #define FreeRDP_Workarea (1536)
@@ -1164,12 +1205,40 @@ struct rdp_settings
 	ALIGN64 UINT32 Password51Length;   /* 1281 */
 	ALIGN64 BOOL SmartcardLogon;       /* 1282 */
 	ALIGN64 BOOL PromptForCredentials; /* 1283 */
-	UINT64 padding1344[1344 - 1284];   /* 1284 */
+	ALIGN64 char*  Pkcs11Module;                  /* 1284 */
+	ALIGN64 BOOL   PinLoginRequired;              /* 1285 */
+	ALIGN64 BOOL   PinPadIsPresent;               /* 1286 */
+	ALIGN64 char*  Pin;                           /* 1287 */
+	ALIGN64 UINT32 KeySpec;                       /* 1288 */
+	ALIGN64 char*  CardName;                      /* 1289 */
+	ALIGN64 char*  ReaderName;                    /* 1290 */
+	ALIGN64 char*  ContainerName;                 /* 1291 */
+	ALIGN64 char*  CspName;                       /* 1292 */
+	ALIGN64 char*  UserHint;                      /* 1293 */
+	ALIGN64 char*  DomainHint;                    /* 1294 */
+	ALIGN64 UINT32 CredentialsType;               /* 1295 */
+	ALIGN64 char*  UserPrincipalName;             /* 1296 */
+	ALIGN64 char*  CanonicalizedUserHint;         /* 1297 */
+	ALIGN64 char*  IdCertificate;                 /* 1298 */
+	ALIGN64 UINT64 IdCertificateLength;           /* 1299 */
+	ALIGN64 char*  PkinitIdentity;                /* 1300 */
+	ALIGN64 char*  PkinitAnchors;                 /* 1301 */
+	ALIGN64 UINT64 SlotID;                        /* 1302 */
+	ALIGN64 char*  TokenLabel;                    /* 1303 */
+	ALIGN64 INT32  TokenFlags;                    /* 1304 */
+	ALIGN64 char*  KerberosStartTime;             /* 1305 */
+	ALIGN64 char*  KerberosLifeTime;              /* 1306 */
+	ALIGN64 char*  KerberosRenewableLifeTime;     /* 1307 */
+	ALIGN64 BOOL   Pkinit;                        /* 1308 */
+	ALIGN64 char*  PkinitCertificate;             /* 1309 */
+	ALIGN64 BOOL   Krb5Trace;             	      /* 1310 */
+	UINT64  padding1344[1344 - 1311];     	      /* 1311 */
 
 	/* Kerberos Authentication */
-	ALIGN64 char* KerberosKdc;       /* 1344 */
-	ALIGN64 char* KerberosRealm;     /* 1345 */
-	UINT64 padding1408[1408 - 1346]; /* 1346 */
+	ALIGN64 char* KerberosKdc;   /* 1344 */
+	ALIGN64 char* KerberosRealm; /* 1345 */
+	ALIGN64 BOOL CrossDomainLogin; /* 1346 */
+	UINT64 padding1408[1408 - 1347]; /* 1347 */
 
 	/* Server Certificate */
 	ALIGN64 BOOL IgnoreCertificate;                /* 1408 */

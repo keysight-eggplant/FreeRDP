@@ -460,7 +460,7 @@ BOOL drive_file_read(DRIVE_FILE* file, BYTE* buffer, UINT32* Length)
 
 	DEBUG_WSTR("Read file %s", file->fullpath);
 
-	if (ReadFile(file->file_handle, buffer, *Length, &read, NULL))
+	if (ReadFile(file->file_handle, buffer, *Length, (LPDWORD)&read, NULL))
 	{
 		*Length = read;
 		return TRUE;
@@ -480,7 +480,7 @@ BOOL drive_file_write(DRIVE_FILE* file, BYTE* buffer, UINT32 Length)
 
 	while (Length > 0)
 	{
-		if (!WriteFile(file->file_handle, buffer, Length, &written, NULL))
+		if (!WriteFile(file->file_handle, buffer, Length, (LPDWORD)&written, NULL))
 			return FALSE;
 
 		Length -= written;
@@ -812,6 +812,7 @@ BOOL drive_file_query_directory(DRIVE_FILE* file, UINT32 FsInformationClass, BYT
 
 	switch (FsInformationClass)
 	{
+#ifndef _WIN32
 		case FileDirectoryInformation:
 
 			/* http://msdn.microsoft.com/en-us/library/cc232097.aspx */
@@ -848,7 +849,7 @@ BOOL drive_file_query_directory(DRIVE_FILE* file, UINT32 FsInformationClass, BYT
 			Stream_Write_UINT32(output, (UINT32)length);                   /* FileNameLength */
 			Stream_Write(output, file->find_data.cFileName, length);
 			break;
-
+#endif // _WIN32
 		case FileFullDirectoryInformation:
 
 			/* http://msdn.microsoft.com/en-us/library/cc232068.aspx */

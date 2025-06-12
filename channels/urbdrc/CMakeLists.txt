@@ -17,6 +17,7 @@
 
 define_channel("urbdrc")
 
+if(NOT WIN32)
 include_directories(common)
 add_subdirectory(common)
 
@@ -27,4 +28,5 @@ if(WITH_CLIENT_CHANNELS)
     include_directories(${LIBUSB_1_INCLUDE_DIRS})
 
     add_channel_client(${MODULE_PREFIX} ${CHANNEL_NAME})
+endif()
 endif()

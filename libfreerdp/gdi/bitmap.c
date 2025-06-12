@@ -244,19 +244,19 @@ static UINT32 process_rop(UINT32 src, UINT32 dst, UINT32 pat, const char* rop, U
 				break;
 
 			case 'x':
-				op_xor(stack, &stackp);
+				op_xor((UINT32 *)stack, (UINT32 *)&stackp);
 				break;
 
 			case 'a':
-				op_and(stack, &stackp);
+				op_and((UINT32 *)stack, (UINT32 *)&stackp);
 				break;
 
 			case 'o':
-				op_or(stack, &stackp);
+				op_or((UINT32 *)stack, (UINT32 *)&stackp);
 				break;
 
 			case 'n':
-				op_not(stack, &stackp);
+				op_not((UINT32 *)stack, (UINT32 *)&stackp);
 				break;
 
 			default:

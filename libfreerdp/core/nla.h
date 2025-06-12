@@ -35,6 +35,7 @@ typedef struct rdp_nla rdpNla;
 #include <freerdp/crypto/crypto.h>
 
 #include "transport.h"
+#include "smartcardlogon.h"
 
 enum _NLA_STATE
 {
