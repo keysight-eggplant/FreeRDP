@@ -930,7 +930,8 @@ void gcc_write_client_core_data(wStream* s, rdpMcs* mcs)
 	rdpSettings* settings = mcs->settings;
 
 	WLog_DBG(TAG, "Entering gcc_write_client_core_data");
-	WLog_DBG(TAG, "Settings: RdpVersion=%" PRIu32 ", DesktopWidth=%" PRIu16 ", DesktopHeight=%" PRIu16,
+	WLog_DBG(TAG,
+	         "Settings: RdpVersion=%" PRIu32 ", DesktopWidth=%" PRIu16 ", DesktopHeight=%" PRIu16,
 	         settings->RdpVersion, settings->DesktopWidth, settings->DesktopHeight);
 
 	gcc_write_user_data_header(s, CS_CORE, 234);
@@ -952,7 +953,8 @@ void gcc_write_client_core_data(wStream* s, rdpMcs* mcs)
 		clientName[clientNameLength - 1] = 0;
 	}
 
-	WLog_DBG(TAG, "ClientHostname=%s, clientNameLength=%d", settings->ClientHostname, clientNameLength);
+	WLog_DBG(TAG, "ClientHostname=%s, clientNameLength=%d", settings->ClientHostname,
+	         clientNameLength);
 
 	Stream_Write(s, clientName, (clientNameLength * 2));
 	Stream_Zero(s, 32 - (clientNameLength * 2));
@@ -970,7 +972,7 @@ void gcc_write_client_core_data(wStream* s, rdpMcs* mcs)
 	supportedColorDepths = RNS_UD_24BPP_SUPPORT | RNS_UD_16BPP_SUPPORT | RNS_UD_15BPP_SUPPORT;
 	earlyCapabilityFlags = RNS_UD_CS_SUPPORT_ERRINFO_PDU;
 
-	connectionType = settings->ConnectionType;
+	// connectionType = settings->ConnectionType;
 
 	if (connectionType)
 		earlyCapabilityFlags |= RNS_UD_CS_VALID_CONNECTION_TYPE;
@@ -981,8 +983,8 @@ void gcc_write_client_core_data(wStream* s, rdpMcs* mcs)
 		earlyCapabilityFlags |= RNS_UD_CS_WANT_32BPP_SESSION;
 	}
 
-	if (settings->NetworkAutoDetect)
-		earlyCapabilityFlags |= RNS_UD_CS_SUPPORT_NETCHAR_AUTODETECT;
+	// if (settings->NetworkAutoDetect)
+	//	earlyCapabilityFlags |= RNS_UD_CS_SUPPORT_NETCHAR_AUTODETECT;
 
 	if (settings->SupportHeartbeatPdu)
 		earlyCapabilityFlags |= RNS_UD_CS_SUPPORT_HEARTBEAT_PDU;
@@ -999,7 +1001,9 @@ void gcc_write_client_core_data(wStream* s, rdpMcs* mcs)
 	if (settings->SupportStatusInfoPdu)
 		earlyCapabilityFlags |= RNS_UD_CS_SUPPORT_STATUSINFO_PDU;
 
-	WLog_DBG(TAG, "highColorDepth=%" PRIu16 ", supportedColorDepths=0x%04x, earlyCapabilityFlags=0x%04x", highColorDepth, supportedColorDepths, earlyCapabilityFlags);
+	WLog_DBG(TAG,
+	         "highColorDepth=%" PRIu16 ", supportedColorDepths=0x%04x, earlyCapabilityFlags=0x%04x",
+	         highColorDepth, supportedColorDepths, earlyCapabilityFlags);
 
 	Stream_Write_UINT16(s, highColorDepth);
 	Stream_Write_UINT16(s, supportedColorDepths);
@@ -1011,7 +1015,8 @@ void gcc_write_client_core_data(wStream* s, rdpMcs* mcs)
 		clientDigProductId[clientDigProductIdLength - 1] = 0;
 	}
 
-	WLog_DBG(TAG, "ClientProductId=%s, clientDigProductIdLength=%d", settings->ClientProductId, clientDigProductIdLength);
+	WLog_DBG(TAG, "ClientProductId=%s, clientDigProductIdLength=%d", settings->ClientProductId,
+	         clientDigProductIdLength);
 
 	Stream_Write(s, clientDigProductId, (clientDigProductIdLength * 2));
 	Stream_Zero(s, 64 - (clientDigProductIdLength * 2));
@@ -1133,7 +1138,7 @@ void gcc_write_client_security_data(wStream* s, rdpMcs* mcs)
 		WLog_DBG(TAG, "Using rdp security layer in gcc_write_client_security_data");
 		Stream_Write_UINT32(s, settings->EncryptionMethods); /* encryptionMethods */
 		WLog_DBG(TAG, "EncryptionMethods=0x%08" PRIX32 "", settings->EncryptionMethods);
-		Stream_Write_UINT32(s, 0);                           /* extEncryptionMethods */
+		Stream_Write_UINT32(s, 0); /* extEncryptionMethods */
 	}
 	else
 	{
@@ -1751,7 +1756,7 @@ void gcc_write_client_cluster_data(wStream* s, rdpMcs* mcs)
 		flags |= REDIRECTED_SMARTCARD;
 
 	WLog_DBG(TAG, "Here is flags: 0x%08" PRIX32 "", flags);
-	Stream_Write_UINT32(s, flags);                         /* flags */
+	Stream_Write_UINT32(s, flags); /* flags */
 	WLog_DBG(TAG, "RedirectedSessionId: %" PRIu32 "", settings->RedirectedSessionId);
 	Stream_Write_UINT32(s, settings->RedirectedSessionId); /* redirectedSessionID */
 }
@@ -1837,7 +1842,8 @@ BOOL gcc_write_client_monitor_data(wStream* s, rdpMcs* mcs)
 		if (!Stream_EnsureRemainingCapacity(s, length))
 			return FALSE;
 
-		WLog_DBG(TAG, "Writing client monitor data with %" PRIu32 " monitors", settings->MonitorCount);
+		WLog_DBG(TAG, "Writing client monitor data with %" PRIu32 " monitors",
+		         settings->MonitorCount);
 		gcc_write_user_data_header(s, CS_MONITOR, length);
 		Stream_Write_UINT32(s, 0);                      /* flags */
 		Stream_Write_UINT32(s, settings->MonitorCount); /* monitorCount */
@@ -1850,8 +1856,7 @@ BOOL gcc_write_client_monitor_data(wStream* s, rdpMcs* mcs)
 			{
 				baseX = settings->MonitorDefArray[i].x;
 				baseY = settings->MonitorDefArray[i].y;
-				WLog_DBG(TAG, "Primary monitor found at (%" PRId32 ", %" PRId32 ")",
-				         baseX, baseY);
+				WLog_DBG(TAG, "Primary monitor found at (%" PRId32 ", %" PRId32 ")", baseX, baseY);
 				break;
 			}
 		}
@@ -1863,8 +1868,10 @@ BOOL gcc_write_client_monitor_data(wStream* s, rdpMcs* mcs)
 			right = left + settings->MonitorDefArray[i].width - 1;
 			bottom = top + settings->MonitorDefArray[i].height - 1;
 			flags = settings->MonitorDefArray[i].is_primary ? MONITOR_PRIMARY : 0;
-			WLog_DBG(TAG, "Monitor %d: (%" PRId32 ", %" PRId32 ") - (%" PRId32 ", %" PRId32
-			                 ") flags: 0x%08" PRIX32 "", i, left, top, right, bottom, flags);
+			WLog_DBG(TAG,
+			         "Monitor %d: (%" PRId32 ", %" PRId32 ") - (%" PRId32 ", %" PRId32
+			         ") flags: 0x%08" PRIX32 "",
+			         i, left, top, right, bottom, flags);
 			Stream_Write_UINT32(s, left);   /* left */
 			Stream_Write_UINT32(s, top);    /* top */
 			Stream_Write_UINT32(s, right);  /* right */
@@ -1941,12 +1948,13 @@ BOOL gcc_write_client_monitor_extended_data(wStream* s, rdpMcs* mcs)
 
 		for (i = 0; i < settings->MonitorCount; i++)
 		{
-			WLog_DBG(TAG, "Monitor %d: (%" PRId32 ", %" PRId32 ") - (%" PRId32 ", %" PRId32
-			                 ") flags: 0x%08" PRIX32 "", i, settings->MonitorDefArray[i].x,
-			                 settings->MonitorDefArray[i].y,
-			                 settings->MonitorDefArray[i].x + settings->MonitorDefArray[i].width - 1,
-			                 settings->MonitorDefArray[i].y + settings->MonitorDefArray[i].height - 1,
-			                 settings->MonitorDefArray[i].is_primary ? MONITOR_PRIMARY : 0);
+			WLog_DBG(TAG,
+			         "Monitor %d: (%" PRId32 ", %" PRId32 ") - (%" PRId32 ", %" PRId32
+			         ") flags: 0x%08" PRIX32 "",
+			         i, settings->MonitorDefArray[i].x, settings->MonitorDefArray[i].y,
+			         settings->MonitorDefArray[i].x + settings->MonitorDefArray[i].width - 1,
+			         settings->MonitorDefArray[i].y + settings->MonitorDefArray[i].height - 1,
+			         settings->MonitorDefArray[i].is_primary ? MONITOR_PRIMARY : 0);
 			Stream_Write_UINT32(
 			    s, settings->MonitorDefArray[i].attributes.physicalWidth); /* physicalWidth */
 			Stream_Write_UINT32(
@@ -1997,9 +2005,10 @@ void gcc_write_client_message_channel_data(wStream* s, rdpMcs* mcs)
 	if (settings->NetworkAutoDetect || settings->SupportHeartbeatPdu ||
 	    settings->SupportMultitransport)
 	{
-		WLog_DBG(TAG, "We have settings->NetworkAutoDetect=%" PRId32
-		                 " settings->SupportHeartbeatPdu=%" PRId32
-		                 " settings->SupportMultitransport=%" PRId32,
+		WLog_DBG(TAG,
+		         "We have settings->NetworkAutoDetect=%" PRId32
+		         " settings->SupportHeartbeatPdu=%" PRId32
+		         " settings->SupportMultitransport=%" PRId32,
 		         settings->NetworkAutoDetect, settings->SupportHeartbeatPdu,
 		         settings->SupportMultitransport);
 		gcc_write_user_data_header(s, CS_MCS_MSGCHANNEL, 8);
