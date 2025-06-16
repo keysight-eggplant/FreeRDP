@@ -972,7 +972,13 @@ void gcc_write_client_core_data(wStream* s, rdpMcs* mcs)
 	supportedColorDepths = RNS_UD_24BPP_SUPPORT | RNS_UD_16BPP_SUPPORT | RNS_UD_15BPP_SUPPORT;
 	earlyCapabilityFlags = RNS_UD_CS_SUPPORT_ERRINFO_PDU;
 
-	// connectionType = settings->ConnectionType;
+	if (settings->NetworkAutoDetect)
+		settings->ConnectionType = CONNECTION_TYPE_AUTODETECT;
+
+	if (settings->RemoteFxCodec && !settings->NetworkAutoDetect)
+		settings->ConnectionType = CONNECTION_TYPE_LAN;
+
+	connectionType = settings->ConnectionType;
 
 	if (connectionType)
 		earlyCapabilityFlags |= RNS_UD_CS_VALID_CONNECTION_TYPE;
@@ -983,8 +989,8 @@ void gcc_write_client_core_data(wStream* s, rdpMcs* mcs)
 		earlyCapabilityFlags |= RNS_UD_CS_WANT_32BPP_SESSION;
 	}
 
-	// if (settings->NetworkAutoDetect)
-	//	earlyCapabilityFlags |= RNS_UD_CS_SUPPORT_NETCHAR_AUTODETECT;
+	if (settings->NetworkAutoDetect)
+		earlyCapabilityFlags |= RNS_UD_CS_SUPPORT_NETWORK_AUTODETECT;
 
 	if (settings->SupportHeartbeatPdu)
 		earlyCapabilityFlags |= RNS_UD_CS_SUPPORT_HEARTBEAT_PDU;
@@ -1000,10 +1006,6 @@ void gcc_write_client_core_data(wStream* s, rdpMcs* mcs)
 
 	if (settings->SupportStatusInfoPdu)
 		earlyCapabilityFlags |= RNS_UD_CS_SUPPORT_STATUSINFO_PDU;
-
-	WLog_DBG(TAG,
-	         "highColorDepth=%" PRIu16 ", supportedColorDepths=0x%04x, earlyCapabilityFlags=0x%04x",
-	         highColorDepth, supportedColorDepths, earlyCapabilityFlags);
 
 	Stream_Write_UINT16(s, highColorDepth);
 	Stream_Write_UINT16(s, supportedColorDepths);
