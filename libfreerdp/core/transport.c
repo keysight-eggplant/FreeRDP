@@ -322,7 +322,7 @@ BOOL transport_connect_nla(rdpTransport *transport) {
 
   if (settings->AuthenticationServiceClass) {
     if (!nla_set_service_principal(
-            rdp->nla, nla_make_spn(settings->AuthenticationServiceClass,
+            rdp->nla, nla_make_spn((char *)settings->AuthenticationServiceClass,
                                    settings->ServerHostname)))
       return FALSE;
   }
