@@ -299,23 +299,46 @@ static BOOL avc444_ensure_buffer(H264_CONTEXT* h264, DWORD nDstHeight)
 	if (pad != 0)
 		padDstHeight += 16 - pad;
 
-	if ((piMainStride[0] != piDstStride[0]) || (piDstSize[0] != piMainStride[0] * padDstHeight))
+	if ((piMainStride[0] == 0) || (padDstHeight == 0))
+		goto fail;
+
 	{
-		for (x = 0; x < 3; x++)
+		/* CVE-2026-55191: piDstStride[x] * padDstHeight can exceed UINT32_MAX for
+		 * server-supplied surface dimensions. Doing the multiplication in 32 bits
+		 * lets it wrap to a small nonzero value, which passes the old
+		 * "!= 0" check below and causes _aligned_malloc to allocate an
+		 * undersized buffer that YUV420CombineToYUV444 later overflows using the
+		 * real (non-wrapped) stride/height. Compute in 64 bits and reject
+		 * anything that would overflow before allocating.
+		 */
+		const UINT64 dstSize = 1ull * piMainStride[0] * padDstHeight;
+
+		if (dstSize > UINT32_MAX)
+			goto fail;
+
+		if ((piMainStride[0] != piDstStride[0]) || (piDstSize[0] != (UINT32)dstSize))
 		{
-			piDstStride[x] = piMainStride[0];
-			piDstSize[x] = piDstStride[x] * padDstHeight;
-			_aligned_free(ppYUVDstData[x]);
-			ppYUVDstData[x] = _aligned_malloc(piDstSize[x], 16);
+			for (x = 0; x < 3; x++)
+			{
+				const UINT64 dstStrideSize = 1ull * piMainStride[0] * padDstHeight;
 
-			if (!ppYUVDstData[x])
-				goto fail;
+				if (dstStrideSize > UINT32_MAX)
+					goto fail;
 
-			memset(ppYUVDstData[x], 0, piDstSize[x]);
+				piDstStride[x] = piMainStride[0];
+				piDstSize[x] = (UINT32)dstStrideSize;
+				_aligned_free(ppYUVDstData[x]);
+				ppYUVDstData[x] = _aligned_malloc(piDstSize[x], 16);
+
+				if (!ppYUVDstData[x])
+					goto fail;
+
+				memset(ppYUVDstData[x], 0, piDstSize[x]);
+			}
+
+			_aligned_free(h264->lumaData);
+			h264->lumaData = _aligned_malloc(1ull * piDstSize[0] * 4, 16);
 		}
-
-		_aligned_free(h264->lumaData);
-		h264->lumaData = _aligned_malloc(piDstSize[0] * 4, 16);
 	}
 
 	for (x = 0; x < 3; x++)
